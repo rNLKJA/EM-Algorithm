@@ -1,74 +1,18 @@
-<div align="center">
-
-# The EM Algorithm — Statistics When You're Missing Data
-
-**A friendly, maths-complete walkthrough of Expectation–Maximization**, built around the Netflix sparse-ratings problem, with a runnable Python demo on a Gaussian mixture.
-
-[![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-F37626?logo=jupyter&logoColor=white)](https://jupyter.org/)
-[![NumPy](https://img.shields.io/badge/NumPy-013243?logo=numpy&logoColor=white)](https://numpy.org/)
-[![SciPy](https://img.shields.io/badge/SciPy-8CAAE6?logo=scipy&logoColor=white)](https://scipy.org/)
-[![Matplotlib](https://img.shields.io/badge/Matplotlib-11557C?logo=matplotlib&logoColor=white)](https://matplotlib.org/)
-
-</div>
-
-## Overview
-
-This repository is a self-contained explainer for the **Expectation–Maximization (EM) algorithm** — the iterative method for finding maximum-likelihood estimates when data is incomplete or has hidden (latent) structure. It pairs a long-form written walkthrough with a runnable notebook so you can read the theory and then watch it converge on synthetic data.
-
-The narrative is framed around a problem most people already understand: a recommender that only ever sees a sparse handful of each user's movie ratings, yet still needs to recover the hidden groups behind them.
-
-## Highlights
-
-- **From intuition to full derivation** — starts with a plain-English "smart detective" story, then builds up the complete E-step (posterior responsibilities via Bayes' theorem) and M-step (weighted parameter updates), including the calculus derivation of the mean update.
-- **Worked numbers, not just symbols** — steps through the E-step and M-step on a tiny `[2, 3, 7, 8]` example so every term is concrete.
-- **Mixed-distribution case** — extends beyond a Gaussian mixture to a Normal + Beta mixture, showing EM handles components of different families.
-- **Runnable demo** — `em_algorithm_demo.ipynb` generates a synthetic Gaussian mixture, implements EM from scratch in an `EMAnalyzer` class, plots convergence of the log-likelihood, and classifies a new observation.
-
-## What's Inside
-
-| Path                      | What it is                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------ |
-| `README.md`               | The full written walkthrough (Netflix framing → E/M derivations → mixtures)    |
-| `em_algorithm_demo.ipynb` | Runnable Python notebook: synthetic data → EM from scratch → convergence plots |
-| `_archive/`               | Preserved copy of the original README                                          |
-
-## Getting Started
-
-```bash
-# 1. Clone
-git clone https://github.com/rNLKJA/EM-Algorithm.git
-cd EM-Algorithm
-
-# 2. (Optional) create a virtual environment
-python3 -m venv .venv && source .venv/bin/activate
-
-# 3. Install the dependencies used by the demo
-pip install numpy scipy pandas matplotlib jupyter
-
-# 4. Launch the notebook
-jupyter notebook em_algorithm_demo.ipynb
-```
-
-Prefer to just read? The walkthrough below stands on its own — no setup required.
-
----
+# Statistics but you're missing data (The EM Algorithm)
 
 ## The Netflix Problem: When Your Data Goes Missing
 
 Imagine you're a data scientist at Netflix in 2010. You're tasked with building a recommendation system that can predict what movies users will love. You have millions of users and thousands of movies, but here's the catch: **most users have only rated a tiny fraction of the available movies**.
 
 Your data looks like this:
-
 - User A rated: "The Matrix" (5 stars), "Inception" (4 stars), "Avatar" (3 stars)
-- User B rated: "The Matrix" (4 stars), "Titanic" (5 stars)
+- User B rated: "The Matrix" (4 stars), "Titanic" (5 stars)  
 - User C rated: "Inception" (5 stars), "Avatar" (4 stars), "Titanic" (2 stars)
 - ...and millions more users with similarly sparse ratings
 
 **The Challenge**: How do you find patterns in this incomplete data? Traditional statistical methods assume you have complete information, but here 99% of your data is missing! You can't just ignore the missing ratings—that would throw away valuable information. But you also can't fill them in randomly—that would corrupt your analysis.
 
 **The EM Algorithm Solution**: This is exactly where the EM Algorithm shines. It's like having a brilliant detective who can:
-
 1. **Look at the partial evidence** (the ratings you do have)
 2. **Make educated guesses** about the missing pieces (what users would rate movies they haven't seen)
 3. **Refine those guesses** based on patterns in the complete picture
@@ -79,9 +23,8 @@ The algorithm doesn't just fill in missing data randomly—it learns the underly
 ## Why This Matters Beyond Netflix
 
 This same problem appears everywhere:
-
 - **Medical Research**: Patients drop out of studies, leaving incomplete health records
-- **Market Research**: Survey respondents skip questions, creating gaps in consumer data
+- **Market Research**: Survey respondents skip questions, creating gaps in consumer data  
 - **Genetics**: DNA sequencing sometimes fails, leaving missing genetic markers
 - **Finance**: Stock prices have gaps during market closures and holidays
 
@@ -94,7 +37,6 @@ The EM Algorithm is the statistical Swiss Army knife that turns incomplete, mess
 **The Core Goal**: The EM Algorithm's primary purpose is to estimate missing or unobserved values by learning from the patterns in our partial observations. Think of it as a sophisticated "fill-in-the-blanks" technique that doesn't just guess randomly, but learns the underlying structure of your data to make intelligent predictions.
 
 **What We're Really Doing**:
-
 - **Input**: Partial observations (like sparse movie ratings, incomplete survey responses, or missing genetic markers)
 - **Process**: Learn the hidden patterns and relationships in the data
 - **Output**: Estimates for the missing values that are consistent with the observed patterns
@@ -105,7 +47,7 @@ The EM Algorithm is the statistical Swiss Army knife that turns incomplete, mess
 
 The Expectation-Maximization (EM) algorithm is a powerful iterative method for finding maximum likelihood estimates when dealing with incomplete data or latent variables. This document provides a comprehensive mathematical treatment of the EM algorithm using the normal distribution as our primary example.
 
-> Probability distributions describe what data values are likely and unlikely
+> Probability distributions describe what data values are likely and unlikely 
 
 ## Overview: The EM Algorithm in Simple Terms
 
@@ -114,7 +56,6 @@ The EM algorithm is like a smart detective that solves a mystery step by step:
 **The Mystery**: You have data from two groups, but you don't know which data point belongs to which group!
 
 **The Solution**: The EM algorithm has two simple steps that it repeats:
-
 1. **E-step (Expectation)**: "Given what I know so far, which group does each data point probably belong to?"
 2. **M-step (Maximization)**: "Now that I have better guesses about the groups, let me update what each group looks like"
 
@@ -123,7 +64,6 @@ The EM algorithm is like a smart detective that solves a mystery step by step:
 ## A Complete Example: Let's Do This Step by Step
 
 Let's say we have 4 movie ratings: [2, 3, 7, 8]. We think there are two groups of users:
-
 - **Group 1**: Users who rate movies low (maybe they're picky)
 - **Group 2**: Users who rate movies high (maybe they're easy to please)
 
@@ -132,7 +72,6 @@ But we don't know which rating belongs to which group!
 ### Initial Guess (Iteration 0)
 
 Let's start with a wild guess:
-
 - **Group 1**: Average rating = 2.5, Standard deviation = 0.5, Mixing proportion = 50%
 - **Group 2**: Average rating = 7.5, Standard deviation = 0.5, Mixing proportion = 50%
 
@@ -143,7 +82,6 @@ Let's start with a wild guess:
 For each rating, we calculate the probability it belongs to each group:
 
 **Rating 2:**
-
 - Probability from Group 1: 0.5 × normal_pdf(2, 2.5, 0.5) = 0.5 × 0.8 = 0.4
 - Probability from Group 2: 0.5 × normal_pdf(2, 7.5, 0.5) = 0.5 × 0.0001 = 0.00005
 - **Total probability**: 0.4 + 0.00005 = 0.40005
@@ -151,7 +89,6 @@ For each rating, we calculate the probability it belongs to each group:
 - **P(Group 2 | rating=2)**: 0.00005/0.40005 = 0.0001 (0.01% chance it's Group 2)
 
 **Rating 3:**
-
 - Probability from Group 1: 0.5 × normal_pdf(3, 2.5, 0.5) = 0.5 × 0.6 = 0.3
 - Probability from Group 2: 0.5 × normal_pdf(3, 7.5, 0.5) = 0.5 × 0.0001 = 0.00005
 - **Total probability**: 0.3 + 0.00005 = 0.30005
@@ -159,7 +96,6 @@ For each rating, we calculate the probability it belongs to each group:
 - **P(Group 2 | rating=3)**: 0.00005/0.30005 = 0.0002 (0.02% chance it's Group 2)
 
 **Rating 7:**
-
 - Probability from Group 1: 0.5 × normal_pdf(7, 2.5, 0.5) = 0.5 × 0.0001 = 0.00005
 - Probability from Group 2: 0.5 × normal_pdf(7, 7.5, 0.5) = 0.5 × 0.8 = 0.4
 - **Total probability**: 0.00005 + 0.4 = 0.40005
@@ -167,7 +103,6 @@ For each rating, we calculate the probability it belongs to each group:
 - **P(Group 2 | rating=7)**: 0.4/0.40005 = 0.9999 (99.99% chance it's Group 2)
 
 **Rating 8:**
-
 - Probability from Group 1: 0.5 × normal_pdf(8, 2.5, 0.5) = 0.5 × 0.0001 = 0.00005
 - Probability from Group 2: 0.5 × normal_pdf(8, 7.5, 0.5) = 0.5 × 0.6 = 0.3
 - **Total probability**: 0.00005 + 0.3 = 0.30005
@@ -179,33 +114,28 @@ For each rating, we calculate the probability it belongs to each group:
 Now we use these probabilities to update our group characteristics:
 
 **New Mixing Proportions:**
-
 - **Group 1 proportion**: (0.9999 + 0.9998 + 0.0001 + 0.0002) / 4 = 2.0000 / 4 = 0.5 (50%)
 - **Group 2 proportion**: (0.0001 + 0.0002 + 0.9999 + 0.9998) / 4 = 2.0000 / 4 = 0.5 (50%)
 
 **New Group 1 Average:**
-
 - **Weighted average**: (0.9999×2 + 0.9998×3 + 0.0001×7 + 0.0002×8) / (0.9999 + 0.9998 + 0.0001 + 0.0002)
 - **Numerator**: 1.9998 + 2.9994 + 0.0007 + 0.0016 = 5.0015
 - **Denominator**: 2.0000
 - **New Group 1 average**: 5.0015 / 2.0000 = 2.5
 
 **New Group 2 Average:**
-
 - **Weighted average**: (0.0001×2 + 0.0002×3 + 0.9999×7 + 0.9998×8) / (0.0001 + 0.0002 + 0.9999 + 0.9998)
 - **Numerator**: 0.0002 + 0.0006 + 6.9993 + 7.9984 = 14.9985
 - **Denominator**: 2.0000
 - **New Group 2 average**: 14.9985 / 2.0000 = 7.5
 
 **New Standard Deviations:**
-
 - **Group 1 std**: √[(0.9999×(2-2.5)² + 0.9998×(3-2.5)² + 0.0001×(7-2.5)² + 0.0002×(8-2.5)²) / 2.0000]
 - **Group 1 std**: √[(0.9999×0.25 + 0.9998×0.25 + 0.0001×20.25 + 0.0002×30.25) / 2.0000] = √[0.5 / 2.0000] = 0.5
 - **Group 2 std**: √[(0.0001×(2-7.5)² + 0.0002×(3-7.5)² + 0.9999×(7-7.5)² + 0.9998×(8-7.5)²) / 2.0000]
 - **Group 2 std**: √[(0.0001×30.25 + 0.0002×20.25 + 0.9999×0.25 + 0.9998×0.25) / 2.0000] = √[0.5 / 2.0000] = 0.5
 
 ### Updated Parameters After Iteration 1:
-
 - **Group 1**: Average = 2.5, Std = 0.5, Proportion = 50%
 - **Group 2**: Average = 7.5, Std = 0.5, Proportion = 50%
 
@@ -214,13 +144,12 @@ Now we use these probabilities to update our group characteristics:
 #### E-step: "Which group does each rating probably belong to?" (with updated parameters)
 
 **Rating 2:**
-
 - Probability from Group 1: 0.5 × normal_pdf(2, 2.5, 0.5) = 0.5 × 0.8 = 0.4
 - Probability from Group 2: 0.5 × normal_pdf(2, 7.5, 0.5) = 0.5 × 0.0001 = 0.00005
 - **P(Group 1 | rating=2)**: 0.4/0.40005 = 0.9999 (99.99% chance it's Group 1)
 - **P(Group 2 | rating=2)**: 0.00005/0.40005 = 0.0001 (0.01% chance it's Group 2)
 
-_(The calculations are the same because our parameters didn't change much)_
+*(The calculations are the same because our parameters didn't change much)*
 
 #### M-step: "Update what each group looks like" (again)
 
@@ -256,7 +185,6 @@ For a normal distribution with mean $\mu$ and standard deviation $\sigma$, the p
 $$f(x) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(x - \mu)^2}{2\sigma^2}\right)$$
 
 **What this means**:
-
 - If $x$ is close to $\mu$, the probability is high
 - If $x$ is far from $\mu$, the probability is low
 - $\sigma$ controls how "spread out" the distribution is
@@ -268,7 +196,6 @@ Instead of multiplying probabilities (which can get very small), we add their lo
 $$\ell(\theta) = \sum_{i=1}^{n} \log f(x_i | \theta)$$
 
 **Why this helps**:
-
 - Adding is easier than multiplying
 - We can compare different models more easily
 - The EM algorithm maximizes this log-likelihood
@@ -277,14 +204,13 @@ $$\ell(\theta) = \sum_{i=1}^{n} \log f(x_i | \theta)$$
 
 ### The Big Picture
 
-The E-step asks: _"Given what I know about the patterns in my data, which group does each data point probably belong to?"_
+The E-step asks: *"Given what I know about the patterns in my data, which group does each data point probably belong to?"*
 
 ### In Simple Terms
 
 **What we're doing**: For each data point, we calculate the probability that it belongs to each group.
 
 **How we do it**: We use Bayes' theorem:
-
 - **Prior**: What we think about each group (mixing proportions)
 - **Likelihood**: How likely is this data point given each group's characteristics
 - **Posterior**: The final probability that this data point belongs to each group
@@ -296,7 +222,6 @@ For each data point $x_i$ and each group $k$:
 $$P(\text{Group } k | x_i) = \frac{\text{Prior}_k \times \text{Likelihood}_k}{\text{Total Probability}}$$
 
 Where:
-
 - **Prior_k** = mixing proportion of group $k$ (e.g., 50% of users are in group 1)
 - **Likelihood_k** = probability of seeing $x_i$ if it came from group $k$
 - **Total Probability** = sum of (Prior × Likelihood) for all groups
@@ -306,7 +231,6 @@ Where:
 Let's say we're trying to separate our data into two groups (like "sci-fi lovers" vs "romance lovers" in the Netflix example), but we don't know which group each user belongs to.
 
 **Setup**:
-
 - Observed data: $\mathbf{X} = \{x_1, x_2, \ldots, x_n\}$ (movie ratings)
 - Latent variables: $\mathbf{Z} = \{z_{ik}\}$ where $z_{ik} \in \{0, 1\}$ is an indicator variable:
   - $z_{ik} = 1$ if user $i$ belongs to group $k$
@@ -320,7 +244,6 @@ Let's say we're trying to separate our data into two groups (like "sci-fi lovers
 $$\log L(\theta; \mathbf{X}, \mathbf{Z}) = \sum_{i=1}^{n} \sum_{k=1}^{2} z_{ik} \log[\pi_k f(x_i | \mu_k, \sigma_k^2)]$$
 
 Where:
-
 - $\pi_k$ = proportion of users in group $k$ (e.g., 60% sci-fi lovers, 40% romance lovers)
 - $f(x_i | \mu_k, \sigma_k^2)$ = normal density for group $k$ (e.g., sci-fi lovers rate action movies highly)
 
@@ -334,7 +257,6 @@ We want to compute:
 $$\gamma_{ik} = E[z_{ik} | x_i, \theta^{(t)}] = P(z_{ik} = 1 | x_i, \theta^{(t)})$$
 
 **What this means**:
-
 - $z_{ik} = 1$ means "user $i$ belongs to group $k$" (e.g., user $i$ is a sci-fi lover)
 - $z_{ik} = 0$ means "user $i$ does NOT belong to group $k$" (e.g., user $i$ is NOT a sci-fi lover)
 - $\gamma_{ik}$ is the probability that user $i$ belongs to group $k$, given their observed rating $x_i$ and our current parameter estimates $\theta^{(t)}$
@@ -347,7 +269,6 @@ Using Bayes' theorem:
 $$P(z_{ik} = 1 | x_i, \theta^{(t)}) = \frac{P(x_i | z_{ik} = 1, \theta^{(t)}) \cdot P(z_{ik} = 1 | \theta^{(t)})}{P(x_i | \theta^{(t)})}$$
 
 Let's break this down:
-
 - $P(x_i | z_{ik} = 1, \theta^{(t)})$ = probability of observing rating $x_i$ given that user $i$ is in group $k$
 - $P(z_{ik} = 1 | \theta^{(t)})$ = prior probability that user $i$ is in group $k$
 - $P(x_i | \theta^{(t)})$ = marginal probability of observing rating $x_i$ (normalizing constant)
@@ -379,13 +300,11 @@ $$\gamma_{ik} = \frac{\pi_k^{(t)} f(x_i | \mu_k^{(t)}, \sigma_k^{2(t)})}{\sum_{j
 #### Step 5: Verification
 
 Let's verify that this makes sense:
-
 - The numerator is the joint probability: $P(x_i, z_{ik} = 1 | \theta^{(t)})$
 - The denominator is the marginal probability: $P(x_i | \theta^{(t)})$
 - The ratio gives us the conditional probability: $P(z_{ik} = 1 | x_i, \theta^{(t)})$
 
 **Intuitive Interpretation**:
-
 - $\gamma_{i1}$ = probability that user $i$ is a "sci-fi lover" given their rating pattern
 - $\gamma_{i2}$ = probability that user $i$ is a "romance lover" given their rating pattern
 - $\gamma_{i1} + \gamma_{i2} = 1$ (user must belong to one group or the other)
@@ -393,12 +312,10 @@ Let's verify that this makes sense:
 ### Example Calculation
 
 Suppose we have a user who rated "The Matrix" (5 stars) and "Titanic" (2 stars). Given our current estimates:
-
 - Sci-fi group: $\mu_1 = 4.5$, $\sigma_1 = 0.8$, $\pi_1 = 0.6$
 - Romance group: $\mu_2 = 3.0$, $\sigma_2 = 1.2$, $\pi_2 = 0.4$
 
 For "The Matrix" rating of 5:
-
 - Sci-fi probability: $0.6 \times f(5 | 4.5, 0.8^2) = 0.6 \times 0.47 = 0.28$
 - Romance probability: $0.4 \times f(5 | 3.0, 1.2^2) = 0.4 \times 0.12 = 0.05$
 
@@ -406,13 +323,13 @@ So $\gamma_{i1} = \frac{0.28}{0.28 + 0.05} = 0.85$ (85% chance this user is a sc
 
 ### Why This Works
 
-The E-step is essentially asking: _"Given this user's rating pattern, which group are they most likely to belong to?"_ It uses Bayes' theorem to update our beliefs about group membership based on the evidence (observed ratings).
+The E-step is essentially asking: *"Given this user's rating pattern, which group are they most likely to belong to?"* It uses Bayes' theorem to update our beliefs about group membership based on the evidence (observed ratings).
 
 ## Maximization (M-step): "Update Your Model"
 
 ### The Big Picture
 
-The M-step asks: _"Now that I have better guesses about which group each data point belongs to, what should each group look like?"_
+The M-step asks: *"Now that I have better guesses about which group each data point belongs to, what should each group look like?"*
 
 ### In Simple Terms
 
@@ -434,7 +351,6 @@ $$\sigma_k = \sqrt{\frac{\sum_{i=1}^{n} P(\text{Group } k | x_i) \times (x_i - \
 ### Intuitive Understanding
 
 Imagine you're a teacher trying to understand two different student groups:
-
 - **E-step**: You look at each student's test scores and guess which group they belong to
 - **M-step**: You then calculate the average score and variability for each group based on your guesses
 
@@ -460,9 +376,8 @@ $$\sigma_k^{2(t+1)} = \frac{\sum_{i=1}^{n} \gamma_{ik} (x_i - \mu_k^{(t+1)})^2}{
 ### Example: Updating Group Characteristics
 
 Suppose after the E-step, we have:
-
 - User A: 85% sci-fi lover, rated "The Matrix" 5 stars
-- User B: 20% sci-fi lover, rated "Titanic" 4 stars
+- User B: 20% sci-fi lover, rated "Titanic" 4 stars  
 - User C: 90% sci-fi lover, rated "Inception" 5 stars
 
 **Updating the sci-fi group mean**:
@@ -473,7 +388,6 @@ Notice how User B's rating of 4 has less influence (weight 0.20) because they're
 ### Why This Makes Sense
 
 The M-step ensures that:
-
 1. **Group proportions** reflect the actual distribution of users across groups
 2. **Group means** are calculated using weighted averages that give more weight to users who are more likely to belong to that group
 3. **Group variances** capture the spread of ratings within each group, again properly weighted
@@ -487,7 +401,6 @@ What if our data comes from two completely different types of distributions? Thi
 ### Real-World Scenario: Product Ratings
 
 Imagine you're analyzing product ratings on an e-commerce platform where:
-
 - **Group 1**: Tech-savvy users who rate products on a continuous scale (0-10) → **Normal Distribution**
 - **Group 2**: Casual users who only give thumbs up/down ratings → **Beta Distribution** (since ratings are bounded between 0 and 1)
 
@@ -497,8 +410,7 @@ Imagine you're analyzing product ratings on an e-commerce platform where:
 
 **Latent Variables**: $\mathbf{Z} = \{z_1, z_2, \ldots, z_n\}$ where $z_i \in \{0, 1\}$ indicates which group user $i$ belongs to
 
-**Parameters**:
-
+**Parameters**: 
 - $\theta = \{\pi_1, \pi_2, \mu, \sigma^2, \alpha, \beta\}$
 - $\pi_1, \pi_2$ = mixing proportions
 - $\mu, \sigma^2$ = parameters for the normal distribution (Group 1)
@@ -532,7 +444,6 @@ Using Bayes' theorem for group 1:
 $$P(z_{i1} = 1 | x_i, \theta^{(t)}) = \frac{P(x_i | z_{i1} = 1, \theta^{(t)}) \cdot P(z_{i1} = 1 | \theta^{(t)})}{P(x_i | \theta^{(t)})}$$
 
 Let's break this down:
-
 - $P(x_i | z_{i1} = 1, \theta^{(t)})$ = probability of observing $x_i$ given that it comes from the normal distribution
 - $P(z_{i1} = 1 | \theta^{(t)})$ = prior probability that observation $i$ comes from group 1
 - $P(x_i | \theta^{(t)})$ = marginal probability of observing $x_i$ from any group
@@ -597,19 +508,16 @@ Where $\psi(x) = \frac{d}{dx}\log\Gamma(x)$ is the digamma function.
 Suppose we observe these ratings: $\{0.2, 0.8, 7.5, 0.3, 8.2, 0.9, 6.1, 0.1\}$
 
 **Initial Guess**:
-
 - Group 1 (Normal): $\mu = 7.0$, $\sigma = 1.0$, $\pi_1 = 0.5$
 - Group 2 (Beta): $\alpha = 2.0$, $\beta = 2.0$, $\pi_2 = 0.5$
 
 **E-step for rating 0.2**:
-
 - Normal probability: $0.5 \times f_1(0.2 | 7.0, 1.0) = 0.5 \times 0.0001 = 0.00005$
 - Beta probability: $0.5 \times f_2(0.2 | 2.0, 2.0) = 0.5 \times 1.2 = 0.6$
 
 So $\gamma_{i2} = \frac{0.6}{0.00005 + 0.6} = 0.9999$ (almost certainly from beta distribution)
 
 **E-step for rating 7.5**:
-
 - Normal probability: $0.5 \times f_1(7.5 | 7.0, 1.0) = 0.5 \times 0.35 = 0.175$
 - Beta probability: $0.5 \times f_2(7.5 | 2.0, 2.0) = 0.5 \times 0 = 0$ (beta is bounded [0,1])
 
@@ -625,7 +533,6 @@ So $\gamma_{i1} = \frac{0.175}{0.175 + 0} = 1.0$ (definitely from normal distrib
 ### Why This Matters
 
 Mixed distribution models are common in practice:
-
 - **Finance**: Stock returns (normal) vs. default probabilities (beta)
 - **Biology**: Gene expression levels (normal) vs. proportions (beta)
 - **Marketing**: Continuous metrics (normal) vs. conversion rates (beta)
@@ -675,34 +582,29 @@ This property ensures convergence to a local maximum of the likelihood function.
 ## Summary: What You Need to Remember
 
 ### The EM Algorithm in One Sentence
-
 **The EM algorithm is a smart way to find hidden groups in your data by making educated guesses and then improving those guesses over and over again.**
 
 ### The Two Steps
-
 1. **E-step**: "Which group does each data point probably belong to?"
 2. **M-step**: "What should each group look like based on these probabilities?"
 
 ### Why It Works
-
 - **It's iterative**: Each step makes the groups clearer
 - **It's guaranteed**: The log-likelihood always improves (or stays the same)
 - **It's flexible**: Works with any type of data distribution
 
 ### When to Use It
-
 - **Missing data**: When you have incomplete information
 - **Hidden groups**: When you suspect there are patterns you can't see directly
 - **Mixture models**: When your data comes from multiple sources
 - **Classification**: When you want to automatically group similar items
 
 ### Real-World Examples
-
 - **Netflix**: Grouping users by movie preferences
 - **Medicine**: Identifying different patient types
 - **Finance**: Detecting different market behaviors
 - **Biology**: Classifying different cell types
 
 ### The Bottom Line
-
 The EM algorithm is like having a smart assistant that can look at messy, incomplete data and figure out the hidden patterns. It's not magic—it's just very good at making educated guesses and then improving them systematically!
+
