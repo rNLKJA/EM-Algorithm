@@ -15,6 +15,86 @@ Step through four ratings by hand, watch a 200-rating Gaussian mixture converge,
 
 </div>
 
+## Showcase
+
+![Walkthrough 2 as a GIF: the notebook's 200 ratings, EM played from the notebook's random start, the run finished past its 15-iteration cap, then a dragged bad start that converges to a lower local maximum](docs/showcase/fit-the-mixture.gif)
+
+_Fitting the notebook's mixture, then landing in a local maximum (walkthrough 2 below). The GIFs here play a little faster than real time, with waits and scrolls cut; the [guided tour](https://em-algorithm-lab.vercel.app/tour) has the full-speed videos with captions, a step-by-step transcript and every screenshot in a lightbox._
+
+### Key features
+
+Desktop at 1440 × 900 (light mode, plus the overview in dark mode), and three phone shots at 390 px. The two AI shots show a **mocked AI response for illustration**: no API key was entered and no provider was called.
+
+|                                                                                                                                                                                                                                                                                                                           |                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| <img src="docs/showcase/01-landing-light.png" alt="Overview. The notebook's fit, the idea in two steps and the six ways in."><br>**Overview.** The notebook's fit, the idea in two steps and the six ways in.                                                                                                             | <img src="docs/showcase/02-landing-dark.png" alt="Overview, dark mode. The same page in dark mode."><br>**Overview, dark mode.** The same page in dark mode.                                                                                                                                                                   |
+| <img src="docs/showcase/03-stepper-e-step.png" alt="Stepper: the E-step. Responsibilities for [2, 3, 7, 8], with the explainer's hand-worked numbers beside them."><br>**Stepper: the E-step.** Responsibilities for [2, 3, 7, 8], with the explainer's hand-worked numbers beside them.                                  | <img src="docs/showcase/04-stepper-m-step.png" alt="Stepper: the M-step. Each update as a weighted average, the explainer's working underneath."><br>**Stepper: the M-step.** Each update as a weighted average, the explainer's working underneath.                                                                           |
+| <img src="docs/showcase/05-playground.png" alt="Playground. The notebook's 200 ratings, its random start and the log-likelihood by iteration."><br>**Playground.** The notebook's 200 ratings, its random start and the log-likelihood by iteration.                                                                      | <img src="docs/showcase/06-playground-local-maximum.png" alt="A bad start, a local maximum. A dragged start converges to ℓ = −423.63, below the −415.37 of the notebook's start."><br>**A bad start, a local maximum.** A dragged start converges to ℓ = −423.63, below the −415.37 of the notebook's start.                   |
+| <img src="docs/showcase/07-pitfalls-label-switching.png" alt="Pitfall: label switching. The notebook's last cell as it ran, and the components matched by mean."><br>**Pitfall: label switching.** The notebook's last cell as it ran, and the components matched by mean.                                                | <img src="docs/showcase/08-pitfalls-local-maxima.png" alt="Pitfall: local maxima. Complete EM runs from 24 random starts, best first, run in a Web Worker."><br>**Pitfall: local maxima.** Complete EM runs from 24 random starts, best first, run in a Web Worker.                                                            |
+| <img src="docs/showcase/09-inference-uncertainty.png" alt="Standard errors and bootstrap intervals. Hessian SEs, Wald and parametric-bootstrap 95% intervals, with the misses marked."><br>**Standard errors and bootstrap intervals.** Hessian SEs, Wald and parametric-bootstrap 95% intervals, with the misses marked. | <img src="docs/showcase/10-inference-coverage.png" alt="Do 95% intervals cover 95%? Coverage across simulated data sets, each rate with its Wilson interval."><br>**Do 95% intervals cover 95%?** Coverage across simulated data sets, each rate with its Wilson interval.                                                     |
+| <img src="docs/showcase/11-inference-choosing-k.png" alt="Choosing K. AIC and BIC for one to four components, with and without the clipped ratings."><br>**Choosing K.** AIC and BIC for one to four components, with and without the clipped ratings.                                                                    | <img src="docs/showcase/12-inference-lrt.png" alt="Bootstrap likelihood-ratio test. The bootstrap null against the χ² reference that Wilks' theorem would suggest."><br>**Bootstrap likelihood-ratio test.** The bootstrap null against the χ² reference that Wilks' theorem would suggest.                                    |
+| <img src="docs/showcase/13-maths.png" alt="Maths. The explainer's derivations rendered with KaTeX, corrections labelled."><br>**Maths.** The explainer's derivations rendered with KaTeX, corrections labelled.                                                                                                           | <img src="docs/showcase/14-methods.png" alt="Methods. Data provenance, method, evaluation design, assumptions and limitations."><br>**Methods.** Data provenance, method, evaluation design, assumptions and limitations.                                                                                                      |
+| <img src="docs/showcase/15-decision-record.png" alt="Decision record DR-002. Label switching: the decision first, then the options, what happened and changes."><br>**Decision record DR-002.** Label switching: the decision first, then the options, what happened and changes.                                         | <img src="docs/showcase/16-model-card.png" alt="Model card. Intended use, data provenance, evaluation with intervals and known failure modes."><br>**Model card.** Intended use, data provenance, evaluation with intervals and known failure modes.                                                                           |
+| <img src="docs/showcase/17-ai-settings.png" alt="Bring your own key. Optional AI settings: Anthropic by default, the key stays in this browser."><br>**Bring your own key.** Optional AI settings: Anthropic by default, the key stays in this browser.                                                                   | <img src="docs/showcase/18-ai-explanation.png" alt="Explain this iteration (mocked). Mocked AI response for illustration: labelled AI-generated, grounding-checked, awaiting review."><br>**Explain this iteration (mocked).** Mocked AI response for illustration: labelled AI-generated, grounding-checked, awaiting review. |
+| <img src="docs/showcase/19-ai-log.png" alt="AI audit log (mocked entry). Mocked AI response for illustration: the call, the reviewer's decision and JSON/CSV export."><br>**AI audit log (mocked entry).** Mocked AI response for illustration: the call, the reviewer's decision and JSON/CSV export.                    |                                                                                                                                                                                                                                                                                                                                |
+
+<img src="docs/showcase/20-mobile-landing.png" width="32%" alt="Phone: overview. The overview at 390 px."> <img src="docs/showcase/21-mobile-stepper.png" width="32%" alt="Phone: stepper. The E-step and the explainer's numbers on a phone."> <img src="docs/showcase/22-mobile-inference.png" width="32%" alt="Phone: inference. The bootstrap histograms, one per parameter.">
+
+### Workflow walkthrough
+
+Three recorded journeys, each step as it appears in the on-screen caption.
+
+#### 1. Step through EM by hand (0:54)
+
+![Walkthrough 1 as a GIF: the stepper on the ratings 2, 3, 7 and 8, the E-step and M-step twice, with the explainer's hand-worked numbers beside the exact ones](docs/showcase/step-through-em.gif)
+
+The explainer's worked example on four ratings, one E-step and one M-step at a time, twice over, with the explainer's hand-worked numbers shown beside the exact ones.
+
+1. Start from the explainer's worked example: four movie ratings, [2, 3, 7, 8]
+2. The explainer's starting guess: μ = 2.5 and 7.5, σ = 0.5, π = 0.5 for both groups
+3. E-step 1: each rating's responsibility γ by Bayes' theorem, the explainer's numbers alongside
+4. The explainer's densities of 0.8 and 0.6 are off: both are 0.4839, one σ from 2.5
+5. M-step 1: weighted averages give back μ = 2.5 and 7.5, σ = 0.5 and π = 0.5, as written
+6. Iteration 2 repeats iteration 1: the starting guess was already a fixed point
+7. The log-likelihood stays at −5.6758, so EM stops; every correction, as written and exact
+
+_Data and settings:_ Ratings [2, 3, 7, 8]; the explainer's starting guess μ = 2.5 and 7.5, σ = 0.5, π = 0.5; tolerance 10⁻⁶. No randomness is involved. [Watch it with captions](https://em-algorithm-lab.vercel.app/tour#step-through-em).
+
+#### 2. Fit the mixture to 200 ratings (1:21)
+
+_The GIF at the top of this section._
+
+The notebook's own experiment, live: its 200 ratings and its random start, the log-likelihood climbing and the responsibilities settling, the run finished past the notebook's 15-iteration cap, then a bad start that lands on a lower local maximum.
+
+1. The notebook's 200 synthetic ratings and its own random start, capped at 15 iterations
+2. Press play: the log-likelihood climbs from −425.50 and the responsibilities settle
+3. Stopped at the cap of 15 with ℓ = −416.51, still rising by 0.0293 per step: not converged
+4. Raise the cap: from the same start EM converges after 90 iterations, at ℓ = −415.37
+5. Now a bad start: drag μ₁ into the middle of the data and narrow σ₁ to 0.2
+6. EM converges again, to a local maximum: ℓ = −423.63, a spike on 2.4% of the ratings at 6.48
+7. The log-likelihood never decreased, yet this peak is 8.3 lower: EM cannot see the better one
+
+_Data and settings:_ The notebook's 200 synthetic ratings (np.random.seed(42), exported from the notebook) and its own random start; tolerance 10⁻⁴. The bad start is a dragged guess: μ₁ moved to about 6.3 with σ₁ = 0.2, μ₂ = 8.5 and σ₂ = 1 left as they were. [Watch it with captions](https://em-algorithm-lab.vercel.app/tour#fit-the-mixture).
+
+#### 3. How sure are we? Intervals and the number of groups (1:03)
+
+![Walkthrough 3 as a GIF: Hessian standard errors and bootstrap intervals, the bootstrap re-run in the browser with seed 42, AIC and BIC for K = 1 to 4 and the bootstrap likelihood-ratio test](docs/showcase/how-sure.gif)
+
+Uncertainty around the notebook's fit: observed-information standard errors and parametric-bootstrap intervals, re-run in the browser with the published seed, then AIC and BIC for one to four groups and a bootstrap likelihood-ratio test of one group against two.
+
+1. The notebook printed point estimates; this page asks how sure, how many and how stable
+2. The notebook's run finished from its own start (170 iterations), with Hessian standard errors
+3. Parametric bootstrap, B = 1,000 at seed 42: π₁ = 0.221, 95% CI 0.110 to 0.359
+4. Re-run the bootstrap in this browser with seed 42: 1,000 refits in a Web Worker
+5. Same seed, same numbers: the browser reproduced the published intervals
+6. How many groups? BIC picks K = 3 and AIC K = 4; the third is the pile of ratings clipped to 10.0
+7. Without the 7 clipped ratings BIC picks K = 2, as it does on 91 of 100 fresh samples
+8. One group or two? Bootstrap LRT p = 0.002; the χ²₃ test would falsely reject 16% of the time
+
+_Data and settings:_ Parametric bootstrap with B = 1,000 at seed 42 (re-run in the browser's Web Worker during the recording). Model choice: K = 1 to 4, best of 60 ordinary and 30 pile starts per K, variance floor σ ≥ 0.1. LRT: B = 500. [Watch it with captions](https://em-algorithm-lab.vercel.app/tour#how-sure).
+
+Every screenshot and recording is made by a Playwright script, [`web/e2e/showcase.spec.ts`](web/e2e/showcase.spec.ts), which drives the site in Google Chrome and checks the numbers it shows on the way (the corrected densities, the notebook's log-likelihoods, the local maximum, the bootstrap interval and its browser re-run, BIC's choice and the LRT), so a broken feature fails the tour instead of producing a misleading video. Everything it uses is deterministic: the notebook's exported ratings and seeded simulations. `cd web && pnpm showcase` remakes all of it (see [Local development](#local-development)).
+
 ## Overview
 
 This is a personal project, not coursework. In September 2025 I wrote a long explainer of the EM algorithm, framed around the Netflix sparse-ratings problem, together with a Jupyter notebook that fits a two-component Gaussian mixture to 200 synthetic "movie ratings" with an `EMAnalyzer` class written from scratch. Both are preserved unchanged in [`original/`](original/), as last edited in June 2026.
@@ -31,6 +111,7 @@ In 2026 I rebuilt them as a small web lab. The TypeScript port of the notebook's
 | **Maths** (`/maths`)           | The explainer's derivations rendered with KaTeX: likelihood, the E-step via Bayes' theorem, the M-step updates, the mean-update derivation, a Normal + Beta mixture and convergence, with corrections labelled and a short addendum.                                                                                                                                                                                                                                                           |
 | **Methods** (`/methods`)       | Data provenance, method, evaluation design, assumptions, limitations and what I'd change; the decision records; a model card for the fitted mixture; and the AI use statement.                                                                                                                                                                                                                                                                                                                 |
 | **AI audit log** (`/ai-log`)   | Every call made by the optional "Explain this iteration" feature from your browser, with JSON and CSV export.                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Tour** (`/tour`)             | Three recorded walkthroughs (stepping through EM by hand, fitting the mixture, and how sure the fit is) with step-by-step transcripts and captions, and screenshots of every key feature.                                                                                                                                                                                                                                                                                                      |
 
 ## Results from the original notebook
 
@@ -100,7 +181,7 @@ The design is informed by the Australian Government's policy for the responsible
 | App         | Jupyter notebook                             | Next.js 16 (App Router, static), React 19, Tailwind CSS v4, shadcn/ui, next-themes                                                                                |
 | Inference   | None                                         | Observed-information SEs, parametric bootstrap, coverage simulation, AIC/BIC, bootstrap LRT, convergence diagnostics (TypeScript, precomputed by a seeded script) |
 | AI          | None                                         | Optional, bring your own key: Anthropic or OpenAI from the browser, zod-validated, audit log in IndexedDB                                                         |
-| Checks      | Printed output                               | Vitest unit, parity and reference tests (SciPy, statsmodels, R), ESLint, Prettier, GitHub Actions                                                                 |
+| Checks      | Printed output                               | Vitest unit, parity and reference tests (SciPy, statsmodels, R), a Playwright end-to-end tour, ESLint, Prettier, GitHub Actions                                   |
 
 Everything is static or runs in the browser: no backend, database or account, and no API key of the site's own (the optional AI feature uses the visitor's key, from their browser). The site is deployed on Vercel as the project `em-algorithm-lab`, with `web/` as its root; set `NEXT_PUBLIC_SITE_URL` there if the domain ever changes (it feeds the canonical and Open Graph URLs).
 
@@ -115,7 +196,8 @@ EM-Algorithm/
 ├── .github/workflows/ci.yml   lint, format, typecheck, test, build (web/)
 ├── docs/
 │   ├── decisions/             DR-001 to DR-006 (rendered on /methods)
-│   └── model-card.md          the fitted mixture's model card (rendered on /methods)
+│   ├── model-card.md          the fitted mixture's model card (rendered on /methods)
+│   └── showcase/              README screenshots and GIFs (made by pnpm showcase)
 ├── original/                  the 2025 explainer and notebook, unchanged (see original/README.md)
 │   ├── em-explainer.md        the long-form explainer (formerly this README)
 │   ├── em_algorithm_demo.ipynb
@@ -128,12 +210,17 @@ EM-Algorithm/
 │   └── stats_reference.R      the R cross-check (prop.test, qchisq, numDeriv)
 └── web/                       the Next.js app (Vercel root)
     ├── assets/og-fonts/       TTF fonts for opengraph-image.tsx (generated, OFL)
+    ├── e2e/                   the Playwright guided tour (showcase.spec.ts) and its helpers
+    ├── playwright.config.ts   BASE_URL (default: production), system Chrome, no browser download
     ├── public/data/notebook-run.json   the notebook's data, random start and trace
+    ├── public/showcase/       /tour videos (MP4), captions (WebVTT), posters and screenshot copies
     ├── scripts/
     │   ├── generate-inference.ts       regenerates the /inference artefact (pnpm inference)
+    │   ├── showcase.mjs                runs the tour and rebuilds the media (pnpm showcase)
+    │   ├── showcase-media.mjs          screenshots, MP4, GIF, captions and posters from the raw tour output
     │   └── sync-docs.mjs               copies ../docs into src/content (pnpm sync:docs)
     └── src/
-        ├── app/               routes: /, /stepper, /playground, /pitfalls, /inference, /maths, /methods, /ai-log
+        ├── app/               routes: /, /stepper, /playground, /pitfalls, /inference, /maths, /methods, /ai-log, /tour
         ├── components/        charts/, stepper/, playground/, pitfalls/, inference/, ai/, methods/, maths/, layout/, common/, ui/
         ├── content/           copies of the decision records and model card (checked against ../docs)
         ├── hooks/             playback, tweened parameters, the EM worker, element width, AI settings
@@ -161,7 +248,13 @@ pnpm test           # Vitest: parity with the notebook, statistics against SciPy
 pnpm build          # static production build
 pnpm inference      # regenerate the /inference artefact (about two minutes; seeds in src/lib/inference/settings.ts)
 pnpm sync:docs      # copy docs/ into web/src/content after editing a decision record or the model card
+
+pnpm showcase       # the guided tour against production: e2e checks, screenshots, recordings, then the media
+BASE_URL=http://localhost:3410 pnpm showcase   # the same against a local `pnpm build` (the server is started for you)
+pnpm showcase:test  # the journeys as quick end-to-end tests: no pauses, no video
 ```
+
+`pnpm showcase` uses the Google Chrome already installed (Playwright's `chrome` channel) and the `ffmpeg` on your PATH; it never downloads a browser. It writes the raw output to `web/.showcase/` (git-ignored), then `docs/showcase/` (PNG screenshots under 600 KB, GIFs under 8 MB) and `web/public/showcase/` (H.264 MP4s under 8 MB, WebVTT captions, posters and WebP copies for `/tour`).
 
 The site needs no keys or secrets. Its two optional settings are documented in [`web/.env.example`](web/.env.example): `NEXT_PUBLIC_SITE_URL` (the canonical and Open Graph base URL, defaulting to `https://em-algorithm-lab.vercel.app`) and `NEXT_PUBLIC_REPO_REF` (the git ref the "view source" links point at, defaulting to `main`). Copy the file to `web/.env.local` to override them; a value left blank counts as unset.
 

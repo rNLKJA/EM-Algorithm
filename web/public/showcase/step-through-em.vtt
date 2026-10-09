@@ -1,0 +1,31 @@
+WEBVTT
+
+NOTE Step through EM by hand: captions match the on-screen steps.
+
+1
+00:00:00.200 --> 00:00:05.820
+Step 1 of 7. Start from the explainer's worked example: four movie ratings, [2, 3, 7, 8].
+
+2
+00:00:05.820 --> 00:00:11.239
+Step 2 of 7. The explainer's starting guess: μ = 2.5 and 7.5, σ = 0.5, π = 0.5 for both groups.
+
+3
+00:00:11.239 --> 00:00:17.587
+Step 3 of 7. E-step 1: each rating's responsibility γ by Bayes' theorem, the explainer's numbers alongside.
+
+4
+00:00:17.587 --> 00:00:24.037
+Step 4 of 7. The explainer's densities of 0.8 and 0.6 are off: both are 0.4839, one σ from 2.5.
+
+5
+00:00:24.037 --> 00:00:32.803
+Step 5 of 7. M-step 1: weighted averages give back μ = 2.5 and 7.5, σ = 0.5 and π = 0.5, as written.
+
+6
+00:00:32.803 --> 00:00:41.339
+Step 6 of 7. Iteration 2 repeats iteration 1: the starting guess was already a fixed point.
+
+7
+00:00:41.339 --> 00:00:52.806
+Step 7 of 7. The log-likelihood stays at −5.6758, so EM stops; every correction, as written and exact.

@@ -1,0 +1,178 @@
+{
+  "walkthroughs": {
+    "fit-the-mixture": {
+      "duration": 81.6,
+      "bytes": 3997202,
+      "cues": [
+        0.2,
+        6.6,
+        19.8,
+        26,
+        41.4,
+        58,
+        72.9
+      ]
+    },
+    "how-sure": {
+      "duration": 63.3,
+      "bytes": 3945817,
+      "cues": [
+        0.2,
+        7.8,
+        16.1,
+        20.2,
+        31.1,
+        35.7,
+        44.6,
+        50.7
+      ]
+    },
+    "step-through-em": {
+      "duration": 54.9,
+      "bytes": 3320212,
+      "cues": [
+        0.2,
+        5.8,
+        11.2,
+        17.6,
+        24,
+        32.8,
+        41.3
+      ]
+    }
+  },
+  "screenshots": {
+    "01-landing-light": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "02-landing-dark": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "03-stepper-e-step": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "04-stepper-m-step": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "05-playground": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "06-playground-local-maximum": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "07-pitfalls-label-switching": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "08-pitfalls-local-maxima": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "09-inference-uncertainty": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "10-inference-coverage": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "11-inference-choosing-k": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "12-inference-lrt": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "13-maths": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "14-methods": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "15-decision-record": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "16-model-card": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "17-ai-settings": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "18-ai-explanation": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "19-ai-log": {
+      "width": 1440,
+      "height": 900,
+      "thumbWidth": 720,
+      "thumbHeight": 450
+    },
+    "20-mobile-landing": {
+      "width": 585,
+      "height": 1266,
+      "thumbWidth": 390,
+      "thumbHeight": 844
+    },
+    "21-mobile-stepper": {
+      "width": 585,
+      "height": 1266,
+      "thumbWidth": 390,
+      "thumbHeight": 844
+    },
+    "22-mobile-inference": {
+      "width": 585,
+      "height": 1266,
+      "thumbWidth": 390,
+      "thumbHeight": 844
+    }
+  }
+}

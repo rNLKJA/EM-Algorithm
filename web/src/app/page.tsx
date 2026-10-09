@@ -2,6 +2,7 @@ import {
   ArrowRight,
   BookOpenText,
   ChartNoAxesCombined,
+  CirclePlay,
   FlaskConical,
   Footprints,
   NotebookPen,
@@ -107,7 +108,16 @@ export default function Home() {
                 <Link href="/playground">Open the playground</Link>
               </Button>
             </div>
-            <p className="mt-6 text-sm text-muted-foreground">
+            <p className="mt-5 text-sm">
+              <Link href="/tour" className="group inline-flex items-center gap-2">
+                <CirclePlay className="size-4 text-comp-1-ink" aria-hidden />
+                <span className="font-medium underline decoration-comp-1/50 underline-offset-[3px] transition-colors group-hover:decoration-comp-1">
+                  Watch the guided tour
+                </span>
+                <span className="text-muted-foreground">· three short walkthroughs</span>
+              </Link>
+            </p>
+            <p className="mt-4 text-sm text-muted-foreground">
               A personal project by {site.author} · written 2025, revived 2026
             </p>
           </div>

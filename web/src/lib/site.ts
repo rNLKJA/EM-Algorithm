@@ -39,6 +39,7 @@ export const nav = [
   { href: "/inference", label: "Inference", blurb: "How sure, how many" },
   { href: "/maths", label: "Maths", blurb: "The derivations" },
   { href: "/methods", label: "Methods", blurb: "Decisions and the model card" },
+  { href: "/tour", label: "Tour", blurb: "Recorded walkthroughs" },
 ] as const;
 
 /**
