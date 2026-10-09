@@ -10,12 +10,14 @@ import { ConvergenceSection } from "@/components/inference/convergence-section";
 import { CoverageSection } from "@/components/inference/coverage-section";
 import { count, fmt, pct, pctInterval, THETA_ROWS } from "@/components/inference/format";
 import { LrtPlot } from "@/components/inference/lrt-plot";
+import { SeedsTable } from "@/components/inference/seeds-table";
 import { M, MathBlock } from "@/components/maths/tex";
 import { fit } from "@/lib/em/em";
 import { notebookFinal, notebookRun } from "@/lib/em/notebook-run";
 import type { KRow } from "@/lib/inference/model-choice";
 import { pairedCoverageDifferences } from "@/lib/inference/paired-coverage";
 import { inference } from "@/lib/inference/results";
+import { seedRows } from "@/lib/inference/seeds";
 import { INFERENCE_SETTINGS } from "@/lib/inference/settings";
 import { toTheta } from "@/lib/inference/uncertainty";
 import { sci } from "@/lib/format";
@@ -79,10 +81,14 @@ export default function InferencePage() {
   const s = INFERENCE_SETTINGS;
   const truth = toTheta(notebookRun.trueParams);
   const notebook15 = toTheta(notebookFinal);
-  const toTol = fit(notebookRun.ratings, notebookRun.init, {
-    maxIterations: 1000,
-    tolerance: notebookRun.fit.tolerance,
-  }).iterations.length;
+  // the notebook's own start, run to each tolerance of the convergence study
+  const notebookTo = s.convergence.tolerances.map((tolerance) => {
+    const r = fit(notebookRun.ratings, notebookRun.init, {
+      maxIterations: s.convergence.maxIterations,
+      tolerance,
+    });
+    return r.stopReason === "converged" ? r.iterations.length : null;
+  });
 
   const misses = (lo: (j: number) => number, hi: (j: number) => number) =>
     truth.filter((t, j) => t < lo(j) || t > hi(j)).length;
@@ -162,8 +168,10 @@ export default function InferencePage() {
   };
   const lrt = a.lrt;
   const naive = wilsonInterval(lrt.naiveRejections, lrt.options.B);
+  const floorBound = wilsonInterval(lrt.floorBinding, lrt.options.B);
   const ic = a.initComparison;
   const faster = wilsonInterval(ic.iterations.difference.aHigher, ic.iterations.difference.n);
+  const seeds = seedRows(a);
 
   return (
     <>
@@ -172,8 +180,11 @@ export default function InferencePage() {
           The notebook printed point estimates. This page asks the questions a statistician would
           ask next: how precise those estimates are, whether the intervals around them can be
           trusted, how many groups the data support, and whether EM&apos;s answer depends on where
-          it starts. Every number is precomputed with the seeds shown, and the fast ones can be
-          re-run in your browser.
+          it starts. Every number is precomputed from a fixed seed, listed with its sizes under{" "}
+          <a className="link" href="#seeds">
+            seeds and sizes
+          </a>{" "}
+          at the end, and the fast ones can be re-run in your browser.
         </p>
       </PageHeader>
 
@@ -213,8 +224,8 @@ export default function InferencePage() {
               maximum), inverted. It gives a Wald interval,{" "}
               <M>{String.raw`\hat\theta \pm 1.96\,\mathrm{SE}`}</M>. The{" "}
               <strong>parametric bootstrap</strong> simulates {count(a.bootstrap.B)} new data sets
-              of 200 ratings from the fitted mixture, refits EM to each and reads the 2.5% and 97.5%
-              points of the {count(a.bootstrap.B)} estimates.
+              of 200 ratings from the fitted mixture (seed {a.bootstrap.seed}), refits EM to each
+              and reads the 2.5% and 97.5% points of the {count(a.bootstrap.B)} estimates.
             </p>
           </div>
 
@@ -234,8 +245,13 @@ export default function InferencePage() {
             </Callout>
             {other ? (
               <Callout title="A second, higher maximum">
-                {other.startsReaching} of {other.starts} random starts reach a different maximum,{" "}
-                <Ell /> = {fmt(other.logLikelihood, 2)}, higher by{" "}
+                {other.startsReaching} of {other.starts} random starts (Wilson{" "}
+                {pctInterval(wilsonInterval(other.startsReaching, other.starts), 1)}; seed{" "}
+                {a.convergence.options.seed}, see{" "}
+                <a className="link" href="#convergence">
+                  convergence
+                </a>
+                ) reach a different maximum, <Ell /> = {fmt(other.logLikelihood, 2)}, higher by{" "}
                 {fmt(other.logLikelihood - a.mle.logLikelihood, 2)}: a broad component (
                 {fmt(100 * other.theta[0], 0)}% at {fmt(other.theta[1], 2)}, σ{" "}
                 {fmt(other.theta[3], 2)}) plus a narrow one at {fmt(other.theta[2], 2)} (σ{" "}
@@ -254,10 +270,10 @@ export default function InferencePage() {
               checkable: simulate data sets from the notebook&apos;s true mixture (60% at 7.5 with σ
               1.2, 40% at 4.0 with σ 1.5, n = 200), fit each by EM from a k-means++ start, build the
               intervals and count. {count(a.coverage.model.S)} data sets per scenario for Wald
-              intervals, once with the model exactly and once clipped to 1 to 10 like the notebook;{" "}
-              {count(a.bootstrapCoverage.S)} for the percentile bootstrap (B ={" "}
-              {a.bootstrapCoverage.bootstrapB} each), paired with the Wald intervals on the same
-              data sets.
+              intervals (seed {a.coverage.model.seed}), once with the model exactly and once clipped
+              to 1 to 10 like the notebook; {count(a.bootstrapCoverage.S)} for the percentile
+              bootstrap (B = {a.bootstrapCoverage.bootstrapB} each, seed {a.bootstrapCoverage.seed}
+              ), paired with the Wald intervals on the same data sets.
             </p>
             <p>
               <strong>Neither reaches 95%.</strong> Wald intervals covered between{" "}
@@ -307,11 +323,11 @@ export default function InferencePage() {
               ) : null}
             </p>
             <p>
-              Each K gets the best of {ordinaryStarts} ordinary starts (k-means++, Forgy and random)
-              and {pileStarts} <em>pile starts</em>, which put a narrow component on the{" "}
-              {a.modelChoice.dropped} tied ratings at 10.0. The pile starts matter: ordinary starts
-              spread their means over the bulk of the ratings with wide spreads, so none of them
-              isolates seven identical values.
+              Each K gets the best of {ordinaryStarts} ordinary starts (k-means++, Forgy and random;
+              seed {full.options.seed}) and {pileStarts} <em>pile starts</em>, which put a narrow
+              component on the {a.modelChoice.dropped} tied ratings at 10.0. The pile starts matter:
+              ordinary starts spread their means over the bulk of the ratings with wide spreads, so
+              none of them isolates seven identical values.
               {onlyPilesFoundIt.length ? (
                 <>
                   {" "}
@@ -453,10 +469,11 @@ export default function InferencePage() {
               <h3 className="text-xl font-semibold">Is that unusual for the recipe?</h3>
               <p className="mt-3">
                 The notebook&apos;s data are one draw. Drawing {a.selection.model.options.S} fresh
-                samples of 200 from the same recipe ({a.selection.model.options.restarts} starts per
-                K, plus {a.selection.model.options.pileStarts} pile starts wherever clipping piled
-                three or more ratings onto one value) shows how the criteria behave in general. BIC
-                picks two components in {selBic2.successes} of {selBic2.n} samples (Wilson{" "}
+                samples of 200 from the same recipe (seed {a.selection.model.options.seed};{" "}
+                {a.selection.model.options.restarts} starts per K, plus{" "}
+                {a.selection.model.options.pileStarts} pile starts wherever clipping piled three or
+                more ratings onto one value) shows how the criteria behave in general. BIC picks two
+                components in {selBic2.successes} of {selBic2.n} samples (Wilson{" "}
                 {pctInterval(selBic2, 0)}) and in {selBic2Clipped.successes} of {selBic2Clipped.n}{" "}
                 when clipped; otherwise it picks one component ({selBic1.successes} and{" "}
                 {selBic1Clipped.successes} times) or three ({selBic3.successes} and{" "}
@@ -535,9 +552,9 @@ export default function InferencePage() {
                   so the null lies on the edge of the space (π₂ cannot go below 0) and some
                   parameters vanish from the model there. Wilks&apos; theorem does not apply. The
                   parametric bootstrap side-steps it: fit one normal, simulate{" "}
-                  {count(lrt.options.B)} data sets from it, run the same two-component fit (
-                  {lrt.options.restarts} starts) on each, and use those statistics as the null
-                  distribution.
+                  {count(lrt.options.B)} data sets from it (seed {lrt.options.seed}), run the same
+                  two-component fit ({lrt.options.restarts} starts) on each, and use those
+                  statistics as the null distribution.
                 </p>
               </div>
               <div className="sheet space-y-3 p-4 sm:p-5 lg:self-start">
@@ -552,7 +569,7 @@ export default function InferencePage() {
                 <ul className="grid gap-x-5 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">
                   <li className="flex items-center gap-1.5">
                     <span className="inline-block h-3 w-4 rounded-sm bg-comp-1/35" aria-hidden />
-                    bootstrap null ({count(lrt.options.B)} data sets)
+                    bootstrap null ({count(lrt.options.B)} data sets, seed {lrt.options.seed})
                   </li>
                   <li className="flex items-center gap-1.5">
                     <svg viewBox="0 0 16 8" className="h-2 w-4" aria-hidden>
@@ -621,8 +638,9 @@ export default function InferencePage() {
             <p className="text-sm text-muted-foreground">
               The bootstrap&apos;s 95% point is {fmt(lrt.null95)} against χ²₃&apos;s{" "}
               {fmt(lrt.chiSquare95)}. The variance floor bound in {lrt.floorBinding} of the{" "}
-              {count(lrt.options.B)} null fits; leaving those out moves the 95% point to{" "}
-              {fmt(lrt.null95Unfloored)}, so the gap is not an artefact of the floor (
+              {count(lrt.options.B)} null fits (Wilson {pctInterval(floorBound, 1)}); leaving those
+              out moves the 95% point to {fmt(lrt.null95Unfloored)}, so the gap is not an artefact
+              of the floor (
               <Link className="link" href="/methods#dr-003">
                 DR-003
               </Link>
@@ -644,7 +662,8 @@ export default function InferencePage() {
           <div className="prose-notebook">
             <p>
               {count(a.convergence.runs.length)} notebook-style random starts (μ ~ U(3, 8), σ ~
-              U(0.5, 2), π = 0.5) on the notebook&apos;s 200 ratings, each run until |Δ
+              U(0.5, 2), π = 0.5; seed {a.convergence.options.seed}) on the notebook&apos;s 200
+              ratings, each run until |Δ
               <Ell />| &lt; 10⁻¹² with its whole log-likelihood trace kept. The ascent property
               holds in every run. The answer does depend on the start: most runs reach the maximum
               the notebook was heading for, and a few find the narrow-component maximum with a
@@ -653,7 +672,7 @@ export default function InferencePage() {
               less.
             </p>
           </div>
-          <ConvergenceSection published={a.convergence} notebookIterations={toTol} />
+          <ConvergenceSection published={a.convergence} notebookIterations={notebookTo} />
 
           <div className="sheet grid gap-5 p-4 sm:p-6 lg:grid-cols-[1fr_1.1fr]">
             <div>
@@ -662,9 +681,10 @@ export default function InferencePage() {
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 The same {count(ic.options.S)} simulated data sets (the notebook&apos;s recipe,
-                clipped), each fitted once from the notebook&apos;s random start and once from
-                k-means++ (tolerance {ic.options.tolerance.toExponential(0).replace("e-", "e−")}).
-                Pairing by data set removes the variation between data sets from the comparison.
+                clipped; seed {ic.options.seed}), each fitted once from the notebook&apos;s random
+                start and once from k-means++ (tolerance{" "}
+                {ic.options.tolerance.toExponential(0).replace("e-", "e−")}). Pairing by data set
+                removes the variation between data sets from the comparison.
               </p>
             </div>
             <dl className="grid gap-3 sm:grid-cols-2">
@@ -677,7 +697,8 @@ export default function InferencePage() {
                 </dd>
                 <dd className="mt-1 text-xs text-muted-foreground">
                   mean paired difference, 95% CI {fmt(ic.iterations.difference.interval.lower, 1)}{" "}
-                  to {fmt(ic.iterations.difference.interval.upper, 1)} (bootstrap over data sets);
+                  to {fmt(ic.iterations.difference.interval.upper, 1)} (bootstrap over data sets, B
+                  = {count(ic.iterations.difference.B)}, seed {ic.iterations.difference.seed});
                   medians {ic.iterations.random.median} vs {ic.iterations.kmeans.median}
                 </dd>
               </div>
@@ -705,6 +726,22 @@ export default function InferencePage() {
             </dl>
           </div>
         </Section>
+
+        <section id="seeds" aria-labelledby="seeds-h" className="scroll-mt-20 border-t pt-12">
+          <p className="eyebrow">reproducibility</p>
+          <h2 id="seeds-h" className="mt-2 text-3xl font-semibold sm:text-4xl">
+            Seeds and sizes
+          </h2>
+          <div className="mt-6 space-y-4">
+            <p className="prose-notebook">
+              Every simulation on this page starts from a fixed seed, so the same code with the same
+              seed and sizes gives the same numbers. The &ldquo;Run in your browser&rdquo; buttons
+              check that for the bootstrap, the Wald coverage study and the random starts; any other
+              seed shows how much a result moves from one simulation to the next.
+            </p>
+            <SeedsTable rows={seeds} />
+          </div>
+        </section>
 
         <Callout title="Where these numbers come from">
           Every number on this page is computed by{" "}

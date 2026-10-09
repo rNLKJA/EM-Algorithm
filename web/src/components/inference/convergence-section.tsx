@@ -29,13 +29,26 @@ const TOL_LABEL = (t: number) =>
     .join("")}`;
 const round = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
 
+/** "90 iterations to 10⁻⁴, 129 to 10⁻⁶ and 168 to 10⁻⁸" */
+function listIterations(tolerances: number[], iterations: (number | null)[]): string {
+  const parts = tolerances.map((t, i) => {
+    const v = iterations[i];
+    const n = v == null ? "more than the cap" : String(v);
+    return i === 0 ? `${n} iterations to ${TOL_LABEL(t)}` : `${n} to ${TOL_LABEL(t)}`;
+  });
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts.join("");
+}
+
 export function ConvergenceSection({
   published,
   notebookIterations,
 }: {
   published: ConvergenceSummary;
-  /** iterations the notebook's own start needs to meet its 1e-4 tolerance */
-  notebookIterations: number;
+  /**
+   * iterations the notebook's own start needs to meet each tolerance, in the
+   * order of published.options.tolerances (null if it never does)
+   */
+  notebookIterations: (number | null)[];
 }) {
   const rerun = useRerun(
     "convergence",
@@ -87,22 +100,25 @@ export function ConvergenceSection({
           <h3 className="text-base font-semibold">Iterations to reach each tolerance</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Box: quartiles and median; whiskers: fastest and slowest of {c.runs.length} random
-            starts. The dashed line is the notebook&apos;s own start, which needs{" "}
-            {notebookIterations} iterations to meet its 10⁻⁴ (it was given 15).
+            starts. The dashed tick in each row is the notebook&apos;s own start:{" "}
+            {listIterations(published.options.tolerances, notebookIterations)} (the notebook gave it
+            15).
           </p>
           <IterationBoxes
             className="mt-3"
             rows={c.options.tolerances.map((t, i) => ({
               label: TOL_LABEL(t),
               spread: c.iterations[i],
+              marker: notebookIterations[published.options.tolerances.indexOf(t)] ?? null,
             }))}
-            marker={{ value: notebookIterations, label: "notebook" }}
             ariaLabel={`Iterations to tolerance over ${c.runs.length} random starts: ${c.options.tolerances
               .map(
                 (t, i) =>
                   `${TOL_LABEL(t)}: median ${c.iterations[i].median}, quartiles ${c.iterations[i].q1} to ${c.iterations[i].q3}, range ${c.iterations[i].min} to ${c.iterations[i].max}`,
               )
-              .join("; ")}.`}
+              .join(
+                "; ",
+              )}. The notebook's own start: ${listIterations(published.options.tolerances, notebookIterations)}.`}
           />
           <p className="num mt-2 text-xs text-muted-foreground">
             {c.options.tolerances.map((t, i) => (
@@ -156,6 +172,7 @@ export function ConvergenceSection({
       </div>
 
       <RerunBar
+        label="the random starts"
         what={`${count(c.runs.length)} notebook-style random starts on the notebook's 200 ratings`}
         seed={rerun.seed}
         publishedSeed={published.options.seed}

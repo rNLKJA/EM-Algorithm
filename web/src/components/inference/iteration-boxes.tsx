@@ -7,23 +7,25 @@ import { cn } from "@/lib/utils";
 
 const M = { top: 8, right: 14, bottom: 30, left: 52 };
 
-/** Horizontal box plots (min, quartiles, median, max) of iterations to each tolerance. */
+/**
+ * Horizontal box plots (min, quartiles, median, max) of iterations to each
+ * tolerance. A row's `marker` (e.g. the notebook's own start) is drawn as a
+ * dashed tick inside that row only, so it never reads as a value for another
+ * tolerance.
+ */
 export function IterationBoxes({
   rows,
-  marker,
   ariaLabel,
   className,
 }: {
-  rows: { label: string; spread: Spread }[];
-  /** e.g. the notebook's own run */
-  marker?: { value: number; label: string };
+  rows: { label: string; spread: Spread; marker?: number | null }[];
   ariaLabel: string;
   className?: string;
 }) {
   const [ref, width] = useElementWidth<HTMLDivElement>(560);
   const band = 34;
   const height = M.top + rows.length * band + M.bottom;
-  const max = Math.max(...rows.map((r) => r.spread.max), marker?.value ?? 0);
+  const max = Math.max(...rows.map((r) => Math.max(r.spread.max, r.marker ?? 0)));
   const x = linearScale([0, max * 1.05], [M.left, width - M.right]);
   const ticks = niceTicks(0, max * 1.05, width < 480 ? 4 : 7);
   return (
@@ -111,22 +113,20 @@ export function IterationBoxes({
                 stroke="currentColor"
                 strokeOpacity={0.5}
               />
+              {r.marker != null ? (
+                <line
+                  x1={x(r.marker)}
+                  x2={x(r.marker)}
+                  y1={cy - band / 2 + 3}
+                  y2={cy + band / 2 - 3}
+                  stroke="var(--correction)"
+                  strokeDasharray="4 3"
+                  strokeWidth={1.6}
+                />
+              ) : null}
             </g>
           );
         })}
-        {marker ? (
-          <g aria-hidden>
-            <line
-              x1={x(marker.value)}
-              x2={x(marker.value)}
-              y1={M.top}
-              y2={height - M.bottom}
-              stroke="var(--correction)"
-              strokeDasharray="4 3"
-              strokeWidth={1.4}
-            />
-          </g>
-        ) : null}
         <text
           x={width - M.right}
           y={height - 2}

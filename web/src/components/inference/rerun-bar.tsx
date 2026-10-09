@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
  * outcome, including whether a re-run with the published seed reproduced it.
  */
 export function RerunBar({
+  label,
   what,
   seed,
   publishedSeed,
@@ -22,6 +23,11 @@ export function RerunBar({
   onReset,
   className,
 }: {
+  /**
+   * Names the analysis for screen readers ("the bootstrap"), so the three bars
+   * on /inference have distinct field and button names.
+   */
+  label: string;
   /** e.g. "B = 1,000 bootstrap data sets" */
   what: string;
   seed: number;
@@ -38,7 +44,8 @@ export function RerunBar({
   const id = useId();
   const [draft, setDraft] = useState(String(publishedSeed));
   const parsed = Number(draft);
-  const valid = Number.isInteger(parsed) && parsed >= 0 && parsed < 2 ** 31;
+  // Number("") is 0, so an empty box has to be ruled out explicitly
+  const valid = draft !== "" && Number.isInteger(parsed) && parsed >= 0 && parsed < 2 ** 31;
   return (
     <div
       className={cn(
@@ -68,7 +75,7 @@ export function RerunBar({
         }}
       >
         <label htmlFor={id} className="text-xs text-muted-foreground">
-          seed
+          seed<span className="sr-only"> for {label}</span>
         </label>
         <input
           id={id}
@@ -91,6 +98,7 @@ export function RerunBar({
             <Cpu data-icon="inline-start" aria-hidden />
           )}
           {running ? "Running…" : "Run in your browser"}
+          <span className="sr-only">: {label}</span>
         </Button>
         {!published ? (
           <Button
@@ -105,6 +113,7 @@ export function RerunBar({
             className="rounded-full"
           >
             <RotateCcw data-icon="inline-start" aria-hidden /> Published
+            <span className="sr-only"> result for {label}</span>
           </Button>
         ) : null}
       </form>

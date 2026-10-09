@@ -43,7 +43,8 @@ export function BootstrapSection({
                 notebook, t = 15
               </th>
               <th scope="col" className="px-2 py-2.5 font-normal">
-                converged MLE
+                converged fit
+                <span className="block text-[0.7rem]">notebook&apos;s maximum</span>
               </th>
               <th scope="col" className="px-2 py-2.5 font-normal">
                 SE (Hessian)
@@ -111,7 +112,7 @@ export function BootstrapSection({
           </li>
           <li className="flex items-center gap-1.5">
             <span className="inline-block h-0.5 w-4 bg-comp-1" aria-hidden />
-            converged MLE
+            converged fit (notebook&apos;s maximum)
           </li>
           <li className="flex items-center gap-1.5">
             <svg viewBox="0 0 16 8" className="h-2 w-4" aria-hidden>
@@ -148,6 +149,7 @@ export function BootstrapSection({
       </div>
 
       <RerunBar
+        label="the parametric bootstrap"
         what={what}
         seed={rerun.seed}
         publishedSeed={published.seed}

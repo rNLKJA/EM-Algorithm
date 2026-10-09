@@ -222,11 +222,16 @@ export default function MethodsPage() {
             </p>
             <p>
               <strong>Uncertainty (2026).</strong> Standard errors from the observed information,
-              the negative Hessian of the observed-data log-likelihood at the MLE by central
-              differences, inverted. Parametric-bootstrap percentile intervals: B data sets drawn
-              from the fitted mixture, each refitted from the fit (warm start), components ordered
-              by mean (DR-002). A coverage study simulates data sets from the known truth and counts
-              how often each nominal 95% interval contains it.
+              the negative Hessian of the observed-data log-likelihood by central differences,
+              inverted, at the local maximum the notebook&apos;s own start converges to (a higher
+              maximum exists; see{" "}
+              <Link className="link" href="/inference#uncertainty">
+                /inference
+              </Link>
+              ). Parametric-bootstrap percentile intervals: B data sets drawn from the fitted
+              mixture, each refitted from the fit (warm start), components ordered by mean (DR-002).
+              A coverage study simulates data sets from the known truth and counts how often each
+              nominal 95% interval contains it.
             </p>
             <p>
               <strong>Choosing K.</strong> EM for K = 1 to 4 components, working in log space, from
@@ -239,8 +244,13 @@ export default function MethodsPage() {
               decrease; iterations to each tolerance across random starts; the share of starts that
               reach the best maximum, with a Wilson interval, turned into the chance that the best
               of R starts gets there. Two methods on the same data sets are compared as a paired
-              mean difference with a bootstrap interval over data sets. Every proportion on the site
-              has a Wilson interval and every seed is printed.
+              mean difference with a bootstrap interval over data sets. Coverage rates, selection
+              rates, success rates and the headline accuracy carry Wilson intervals, and every seed
+              behind /inference is listed in its{" "}
+              <Link className="link" href="/inference#seeds">
+                seeds and sizes
+              </Link>{" "}
+              table.
             </p>
           </div>
         </Section>
@@ -490,9 +500,11 @@ export default function MethodsPage() {
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 The reply must match a JSON schema and is validated again in the browser. A
                 grounding check lists any number in it that was not in the snapshot; it checks{" "}
-                {GROUNDING_SCOPE}. The visitor accepts, edits or rejects each explanation, and every
-                call is written without the key to an audit log in the browser&apos;s IndexedDB:
-                time, feature, provider, the model asked and the model that answered, input, output,
+                {GROUNDING_SCOPE}. The visitor accepts, edits or rejects each explanation; one
+                replaced by asking again, or still undecided when the visitor leaves the page, is
+                closed in the log as superseded or abandoned rather than left pending. Every call is
+                written without the key to an audit log in the browser&apos;s IndexedDB: time,
+                feature, provider, the model asked and the model that answered, input, output,
                 latency, token usage and the decision. Failed calls are recorded too, and a refusal,
                 a cut-off reply or one that failed validation keeps whatever the provider sent back
                 and its token usage. On {ANTHROPIC_MODELS[1].label} a declined request is retried by
