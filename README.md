@@ -5,7 +5,7 @@
 **An interactive companion to a maths-complete explainer of the Expectation–Maximisation algorithm.**
 Step through four ratings by hand, watch a 200-rating Gaussian mixture converge, and see where EM quietly goes wrong.
 
-**Live demo:** _coming soon_ (Vercel project `em-algorithm-lab`)
+**Live demo:** [em-algorithm-lab.vercel.app](https://em-algorithm-lab.vercel.app)
 
 [![CI](https://github.com/rNLKJA/EM-Algorithm/actions/workflows/ci.yml/badge.svg)](https://github.com/rNLKJA/EM-Algorithm/actions/workflows/ci.yml)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
@@ -58,7 +58,7 @@ Rebuilding the notebook number for number turned up a few things. The originals 
 | App | Jupyter notebook | Next.js 16 (App Router, static), React 19, Tailwind CSS v4, shadcn/ui, next-themes |
 | Checks | Printed output | Vitest unit and parity tests, ESLint, Prettier, GitHub Actions |
 
-Everything is static or runs in the browser: no backend, database, account or API key.
+Everything is static or runs in the browser: no backend, database, account or API key. The site is deployed on Vercel as the project `em-algorithm-lab`, with `web/` as its root; set `NEXT_PUBLIC_SITE_URL` there if the domain ever changes (it feeds the canonical and Open Graph URLs).
 
 The port adds two things the notebook does not have, both off the notebook's path: an optional variance floor (for the collapse demo) and an early stop when a component collapses, meaning σ falls below 10⁻⁸ or the parameters stop being finite. Without that guard a collapsing run can freeze at σ ≈ 1.8 × 10⁻¹⁵, see |Δℓ| = 0 and report "converged" on an unbounded spike; the notebook's own run never gets near it (its σ stays above 0.6), so parity is unaffected.
 
