@@ -447,8 +447,8 @@ export default function MethodsPage() {
                   commit history
                 </a>{" "}
                 shows. Every number on the site comes from the code, the tests and the seeded
-                scripts, not from a language model, and the 2025 coursework in{" "}
-                <span className="num">original/</span> is kept as it was.
+                scripts, not from a language model, and the 2025 explainer and notebook in{" "}
+                <span className="num">original/</span> are kept as they were.
               </p>
             </div>
             <div className="sheet p-5">

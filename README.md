@@ -86,7 +86,7 @@ The site works fully without AI. One optional feature, **Explain this iteration*
 - **Labelled, reviewed and audited.** Every output is marked "AI-generated" with its model, latency and token usage. You accept, edit or reject it, and every call is recorded without the key in an IndexedDB audit log. Failed calls are recorded too, and a refusal, a cut-off reply or one that failed validation keeps the reply and token usage it cost. Claude Sonnet 5.5 calls opt into Anthropic's server-side refusal fallback (`fallbacks: "default"`); the log records the model asked, the model that answered and whether the fallback ran.
 - **Viewing the audit log.** Open [`/ai-log`](https://em-algorithm-lab.vercel.app/ai-log) (also linked from the footer and the AI settings dialog) to see each call's input, output, latency, tokens and your decision, and export the log as JSON or CSV. The log exists only in your browser.
 
-- **How this site was built.** Nothing on the site calls an AI model at runtime except this optional feature. The site's code and text were developed with an AI coding assistant (Claude Code), as the commit history shows; every number comes from the code, the tests and the seeded scripts, not from a language model, and `original/` is the 2025 coursework as it was.
+- **How this site was built.** Nothing on the site calls an AI model at runtime except this optional feature. The site's code and text were developed with an AI coding assistant (Claude Code), as the commit history shows; every number comes from the code, the tests and the seeded scripts, not from a language model, and `original/` holds the 2025 explainer and notebook as they were.
 
 The design is informed by the Australian Government's policy for the responsible use of AI in government, the EU AI Act's transparency principles and the NIST AI Risk Management Framework; it is not a claim of compliance with any of them. The client code is in [`web/src/lib/ai/`](web/src/lib/ai/), tested with the network mocked.
 
@@ -141,7 +141,7 @@ EM-Algorithm/
         ├── lib/stats/         intervals, distributions, Hessian, criteria, paired differences (+ SciPy/R reference tests)
         ├── lib/inference/     general-K EM, uncertainty, coverage, model choice, convergence, the artefact
         ├── lib/ai/            bring-your-own-key client: providers, key storage, audit log, explain-iteration
-        ├── lib/charts/        scales and marks for the SVG charts
+        ├── lib/charts/        scales, axis ticks and marks for the SVG charts
         └── workers/           em.worker.ts (fits, restarts and /inference re-runs off the main thread)
 ```
 
