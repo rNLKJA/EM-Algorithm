@@ -9,6 +9,7 @@
  * lists any number in the reply that does not appear in what was sent.
  */
 import { z } from "zod";
+import type { Degeneracy } from "../em/diagnose";
 import type { EStepResult, MixtureParams } from "../em/types";
 import { quantile } from "../stats/descriptive";
 
@@ -141,9 +142,34 @@ export interface IterationInput {
     tolerance: number;
     maxIterations: number;
     /** what happened at this iteration under the rule */
-    status: "continuing" | "converged" | "stopped-at-cap" | "collapsed";
+    status: StoppingStatus;
   };
 }
+
+export type StoppingStatus =
+  | "continuing"
+  | "converged"
+  | "stopped-at-cap"
+  | "collapsed"
+  | "numerical-underflow"
+  | "component-emptied";
+
+/** The status of a run that stopped as degenerate, named after why it broke down. */
+export function degenerateStatus(d: Degeneracy | null): StoppingStatus {
+  if (d?.kind === "underflow") return "numerical-underflow";
+  if (d?.kind === "empty") return "component-emptied";
+  return "collapsed";
+}
+
+/** A plain note on a breakdown status, so the model does not call every NaN a collapse. */
+const STATUS_NOTES: Partial<Record<StoppingStatus, string>> = {
+  collapsed:
+    "status collapsed: one component's sigma shrank to (nearly) zero on a single rating, so the likelihood is unbounded and the run stopped; the parameters_after are not a usable fit.",
+  "numerical-underflow":
+    "status numerical-underflow: a rating was so far from both means that both of its densities rounded to 0 in floating point, so its responsibilities are 0/0 = NaN; this is a numerical failure of the start, not a variance collapse.",
+  "component-emptied":
+    "status component-emptied: one component's responsibility rounded to 0 for every rating, so its new mean is 0/0 = NaN; the run stopped.",
+};
 
 export interface IterationSnapshot {
   page: string;
@@ -199,6 +225,7 @@ export function buildIterationSnapshot(input: IterationInput): IterationSnapshot
       "The E-step uses parameters_before; the M-step turns the responsibilities into parameters_after.",
       "gamma1 is the probability that a rating came from component 1; gamma1 + gamma2 = 1.",
       "The run stops when |log_likelihood_change| is below the tolerance (from the second iteration on) or at max_iterations.",
+      ...(STATUS_NOTES[input.stopping.status] ? [STATUS_NOTES[input.stopping.status]!] : []),
     ],
   };
   if (n < LIST_ALL_BELOW) {

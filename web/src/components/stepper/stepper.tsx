@@ -13,7 +13,7 @@ import { Segmented } from "@/components/common/segmented";
 import { Switch } from "@/components/ui/switch";
 import { usePlayback } from "@/hooks/use-playback";
 import { useTweenedParams } from "@/hooks/use-tweened-params";
-import type { IterationInput } from "@/lib/ai/explain-iteration";
+import { degenerateStatus, type IterationInput } from "@/lib/ai/explain-iteration";
 import { diagnoseStep } from "@/lib/em/diagnose";
 import { normalPdf } from "@/lib/em/gaussian";
 import {
@@ -374,7 +374,7 @@ function iterationInput(stages: StepperStage[], index: number): IterationInput |
   if (!m || m.kind !== "m") return null;
   const last = m.index === stages.length - 1;
   const status = !Number.isFinite(m.logLikelihood)
-    ? "collapsed"
+    ? degenerateStatus(diagnoseStep(DATA, m.before, m.params))
     : !last
       ? "continuing"
       : Math.abs(m.improvement) < TOLERANCE

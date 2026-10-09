@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { usePlayback } from "@/hooks/use-playback";
 import { useTweenedParams } from "@/hooks/use-tweened-params";
-import type { IterationInput } from "@/lib/ai/explain-iteration";
+import { degenerateStatus, type IterationInput } from "@/lib/ai/explain-iteration";
 import { diagnoseFit } from "@/lib/em/diagnose";
 import { eStep, isNonDecreasing, logLikelihood, paramsAt } from "@/lib/em/em";
 import { pyFixed, sci } from "@/lib/format";
@@ -131,11 +131,20 @@ export function Playground() {
             : result.stopReason === "converged"
               ? "converged"
               : result.stopReason === "degenerate"
-                ? "collapsed"
+                ? degenerateStatus(degeneracy)
                 : "stopped-at-cap",
       },
     };
-  }, [result, stage, llValues, dataset, config.gen.seed, config.tolerance, config.maxIterations]);
+  }, [
+    result,
+    stage,
+    llValues,
+    dataset,
+    degeneracy,
+    config.gen.seed,
+    config.tolerance,
+    config.maxIterations,
+  ]);
 
   return (
     // DOM order is the phone order: chart and playback, then the settings, then the

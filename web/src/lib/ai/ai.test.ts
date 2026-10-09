@@ -6,6 +6,7 @@
 import { IDBFactory } from "fake-indexeddb";
 import { describe, expect, it, vi } from "vitest";
 import { README_INIT, README_RATINGS } from "../em/readme-example";
+import { diagnoseStep } from "../em/diagnose";
 import { eStep, logLikelihood, mStep } from "../em/em";
 import { notebookRun } from "../em/notebook-run";
 import {
@@ -29,6 +30,7 @@ import { AiError, describeAiError, kindFromStatus } from "./errors";
 import {
   buildExplainUserPrompt,
   buildIterationSnapshot,
+  degenerateStatus,
   EXPLANATION_JSON_SCHEMA,
   ExplanationSchema,
   explanationToText,
@@ -562,6 +564,35 @@ describe("explain this iteration", () => {
     expect(findUngroundedNumbers("the tolerance is 10⁻⁵", snapshot)).toEqual(["1e-5"]);
     // whole numbers from 0 to 10 written plainly are still left alone
     expect(findUngroundedNumbers("two components and 7 ratings", snapshot)).toEqual([]);
+  });
+
+  it("names a breakdown after its cause, so underflow is not called a collapse", () => {
+    // rating 8 sits 100 or more standard deviations from both means: both densities are 0
+    const narrow = { pi1: 0.5, pi2: 0.5, mu1: 2, mu2: 3, sigma1: 0.05, sigma2: 0.05 };
+    const eNarrow = eStep(data, narrow);
+    const broken = mStep(data, eNarrow.gamma1, eNarrow.gamma2);
+    const status = degenerateStatus(diagnoseStep(data, narrow, broken));
+    expect(status).toBe("numerical-underflow");
+    expect(degenerateStatus({ kind: "empty", component: 2 })).toBe("component-emptied");
+    expect(degenerateStatus({ kind: "collapse", component: 1, sigma: 0 })).toBe("collapsed");
+    expect(degenerateStatus(null)).toBe("collapsed");
+
+    const s = buildIterationSnapshot({
+      source: "stepper",
+      dataset: "four ratings",
+      data,
+      iteration: 1,
+      before: narrow,
+      after: broken,
+      e: eNarrow,
+      logLikelihoodBefore: logLikelihood(data, narrow),
+      logLikelihoodAfter: Number.NaN,
+      stopping: { tolerance: 1e-6, maxIterations: 15, status },
+    });
+    expect(s.stopping_rule.status).toBe("numerical-underflow");
+    expect(s.notes.at(-1)).toMatch(/not a variance collapse/);
+    // an ordinary iteration carries only the three standing notes
+    expect(snapshot.notes).toHaveLength(3);
   });
 
   it("the stepper's explainer start is covered too", () => {
