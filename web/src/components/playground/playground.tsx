@@ -12,6 +12,7 @@ import { PlaybackControls } from "@/components/common/playback-controls";
 import { Segmented } from "@/components/common/segmented";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { useMoreBelow } from "@/hooks/use-more-below";
 import { usePlayback } from "@/hooks/use-playback";
 import { useTweenedParams } from "@/hooks/use-tweened-params";
 import { ratingAxis } from "@/lib/charts/axes";
@@ -36,6 +37,7 @@ export function Playground() {
   const [speed, setSpeed] = useState<Speed>("1");
   const [showTruth, setShowTruth] = useState(true);
   const model = usePlaygroundModel(config);
+  const [settingsRef, settingsMoreBelow] = useMoreBelow<HTMLElement>();
   const { dataset, init, result } = model;
 
   const stageCount = result ? result.iterations.length + 1 : 1;
@@ -196,9 +198,15 @@ export function Playground() {
         </p>
       </section>
 
+      {/* On lg the settings stay in view beside the results (sticky under the 3.5rem
+          header), scrolling on their own when taller than the window, with the bottom edge
+          faded while more settings sit below it. The negative margin plus padding keeps
+          the cards' shadows and focus rings clear of the scroll clip. */}
       <aside
+        ref={settingsRef}
         aria-label="Settings"
-        className="space-y-5 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start"
+        data-more-below={settingsMoreBelow ? "" : undefined}
+        className="settings-column space-y-5 lg:sticky lg:top-[4.5rem] lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:-m-2 lg:max-h-[calc(100dvh-5rem)] lg:[scrollbar-width:thin] lg:self-start lg:overflow-y-auto lg:p-2"
       >
         <section className="sheet space-y-4 p-4">
           <h2 className="text-base font-semibold">Data</h2>
