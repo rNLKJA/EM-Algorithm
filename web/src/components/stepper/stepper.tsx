@@ -12,6 +12,7 @@ import { Segmented } from "@/components/common/segmented";
 import { Switch } from "@/components/ui/switch";
 import { usePlayback } from "@/hooks/use-playback";
 import { useTweenedParams } from "@/hooks/use-tweened-params";
+import { diagnoseStep } from "@/lib/em/diagnose";
 import { normalPdf } from "@/lib/em/gaussian";
 import {
   README_AS_WRITTEN,
@@ -535,6 +536,7 @@ function MPanel({
 }) {
   const { sums, params: p, before } = stage;
   const n = DATA.length;
+  const degeneracy = Number.isFinite(stage.logLikelihood) ? null : diagnoseStep(DATA, before, p);
   const w = README_AS_WRITTEN.mStep;
   const lines: {
     k: 1 | 2;
@@ -618,14 +620,34 @@ function MPanel({
         log-likelihood {smart(stage.logLikelihood, 4)}{" "}
         <span className="text-muted-foreground">(change {signed(stage.improvement, 6)})</span>
       </p>
-      {!Number.isFinite(stage.logLikelihood) && (
+      {degeneracy && (
         <p className="rounded-lg border border-destructive/35 bg-destructive/[0.06] px-3 py-2.5 text-sm leading-relaxed">
-          This start collapsed: one group ended up owning a single rating, its spread shrank to zero
-          and the next density is 0/0. The{" "}
-          <a className="link" href="/pitfalls#variance-collapse">
-            pitfalls page
-          </a>{" "}
-          explains why.
+          {degeneracy.kind === "underflow" ? (
+            <>
+              This start broke down numerically, not by collapse. Rating{" "}
+              <span className="num">{degeneracy.x}</span> sits{" "}
+              <span className="num">{degeneracy.z[0].toFixed(1)}σ</span> from μ₁ and{" "}
+              <span className="num">{degeneracy.z[1].toFixed(1)}σ</span> from μ₂, so both of its
+              densities round to 0 in floating point and its responsibilities are 0/0 = NaN; every
+              update after that is NaN too. The notebook&apos;s{" "}
+              <span className="num">normal_pdf</span> does exactly the same. Wider spreads or closer
+              means avoid it.
+            </>
+          ) : degeneracy.kind === "empty" ? (
+            <>
+              This start broke down: group {degeneracy.component} got a responsibility of 0 for
+              every rating, so its new mean is 0/0 = NaN. Try a start whose groups overlap the data.
+            </>
+          ) : (
+            <>
+              This start collapsed: group {degeneracy.component} ended up owning a single rating,
+              its spread shrank to zero and the next density is 0/0. The{" "}
+              <a className="link" href="/pitfalls#variance-collapse">
+                pitfalls page
+              </a>{" "}
+              explains why.
+            </>
+          )}
         </p>
       )}
       {written && (
