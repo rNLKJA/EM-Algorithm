@@ -3,6 +3,8 @@
  * key, rate limit, browser/CORS failure, ...) without ever echoing the key.
  */
 
+import type { TokenUsage } from "./types";
+
 export type AiErrorKind =
   | "no_key"
   | "invalid_key"
@@ -19,15 +21,43 @@ export type AiErrorKind =
   | "truncated"
   | "invalid_output";
 
+/**
+ * What the provider sent back on a call that still failed (a refusal, a reply
+ * cut off at the token limit, or one that did not match the schema). Those calls
+ * spent the visitor's tokens, so the audit log keeps the reply and the usage.
+ */
+export interface AiErrorDetails {
+  /** the raw reply text, as received */
+  raw?: string;
+  usage?: TokenUsage | null;
+  /** model id reported by the provider */
+  model?: string;
+}
+
 export class AiError extends Error {
   readonly kind: AiErrorKind;
   readonly status?: number;
+  readonly raw?: string;
+  readonly usage?: TokenUsage | null;
+  readonly model?: string;
 
-  constructor(kind: AiErrorKind, message: string, status?: number) {
+  constructor(kind: AiErrorKind, message: string, status?: number, details: AiErrorDetails = {}) {
     super(message);
     this.name = "AiError";
     this.kind = kind;
     this.status = status;
+    this.raw = details.raw;
+    this.usage = details.usage;
+    this.model = details.model;
+  }
+
+  /** The same error with the provider's reply attached. */
+  withDetails(details: AiErrorDetails): AiError {
+    return new AiError(this.kind, this.message, this.status, {
+      raw: details.raw ?? this.raw,
+      usage: details.usage ?? this.usage,
+      model: details.model ?? this.model,
+    });
   }
 
   get retryable(): boolean {

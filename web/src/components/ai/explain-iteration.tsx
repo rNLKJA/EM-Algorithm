@@ -17,6 +17,8 @@ import {
   ExplanationSchema,
   explanationToText,
   findUngroundedNumbers,
+  forDisplay,
+  GROUNDING_SCOPE,
   type Explanation,
   type IterationInput,
   type IterationSnapshot,
@@ -34,7 +36,10 @@ interface Result {
   context: string;
   snapshot: IterationSnapshot;
   checks: Record<string, unknown>;
+  /** the reply as shown (long fields cut; see forDisplay) */
   explanation: Explanation;
+  shortened: boolean;
+  /** the full reply as text: what the grounding check reads and the edit box starts from */
   text: string;
   ungrounded: string[];
   provider: Provider;
@@ -127,6 +132,7 @@ export function ExplainIteration({
         signal: controller.signal,
       });
       const text = explanationToText(res.data);
+      const shown = forDisplay(res.data);
       const ungrounded = findUngroundedNumbers(text, snapshot);
       const checks = { ungrounded_numbers: ungrounded, context };
       const entry: AuditEntry = {
@@ -145,7 +151,8 @@ export function ExplainIteration({
         context,
         snapshot,
         checks,
-        explanation: res.data,
+        explanation: shown.explanation,
+        shortened: shown.shortened,
         text,
         ungrounded,
         provider,
@@ -155,20 +162,24 @@ export function ExplainIteration({
         decision: "pending",
       });
     } catch (e) {
-      const kind = e instanceof AiError ? e.kind : "unknown";
+      const ai = e instanceof AiError ? e : null;
+      const kind = ai?.kind ?? "unknown";
       // cancelled calls are still logged (every call is audited) but need no message
       if (kind !== "aborted") setError(describeAiError(e));
       await record(
         {
           ...base,
-          output: null,
+          // a refusal, a cut-off reply or one that failed validation still cost
+          // tokens: keep what came back
+          model: ai?.model ?? model,
+          output: ai?.raw ?? null,
           status: "error",
           error: {
             kind,
             message: redactSecrets(e instanceof Error ? e.message : String(e), apiKey),
           },
           latency_ms: Math.round(performance.now() - started),
-          usage: null,
+          usage: ai?.usage ?? null,
           decision: "not_applicable",
         },
         apiKey,
@@ -213,7 +224,14 @@ export function ExplainIteration({
   return (
     <section
       aria-labelledby={headingId}
-      className={cn("rounded-2xl border border-dashed bg-card/60 p-4 sm:p-5", className)}
+      // focus lands here after the AI settings dialog closes if the button that
+      // opened it was replaced by a disabled one
+      tabIndex={-1}
+      data-ai-focus-fallback
+      className={cn(
+        "rounded-2xl border border-dashed bg-card/60 p-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-5",
+        className,
+      )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
@@ -238,11 +256,17 @@ export function ExplainIteration({
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           {ready && !hasKey ? (
-            <Button variant="outline" onClick={openAiSettings} className="rounded-full">
+            <Button
+              id={`${headingId}-action`}
+              variant="outline"
+              onClick={openAiSettings}
+              className="rounded-full"
+            >
               <KeyRound data-icon="inline-start" /> Add your API key
             </Button>
           ) : (
             <Button
+              id={`${headingId}-action`}
               onClick={run}
               disabled={!ready || busy || !input}
               className="rounded-full px-3.5"
@@ -374,8 +398,19 @@ export function ExplainIteration({
               </span>
               {ungrounded.length
                 ? `${ungrounded.length} number${ungrounded.length > 1 ? "s" : ""} in this text could not be found in the numbers that were sent (${ungrounded.join(", ")}). Treat ${ungrounded.length > 1 ? "them" : "it"} with care.`
-                : "every number in this text matches the numbers that were sent."}
+                : "every number it checks matches the numbers that were sent."}{" "}
+              <span className="text-muted-foreground">It checks {GROUNDING_SCOPE}.</span>
             </p>
+            {result.shortened && !showingEdit ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                The reply was longer than this panel shows, so it was shortened here. The full reply
+                is in the{" "}
+                <Link href="/ai-log" className="underline underline-offset-3">
+                  audit log
+                </Link>
+                , and the grounding check read all of it.
+              </p>
+            ) : null}
 
             {result.decision === "pending" && !editing ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">

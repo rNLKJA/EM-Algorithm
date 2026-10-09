@@ -14,15 +14,63 @@ import { quantile } from "../stats/descriptive";
 
 export const EXPLAIN_FEATURE = "explain-iteration";
 
+/**
+ * Validates exactly the contract in EXPLANATION_JSON_SCHEMA and nothing more.
+ * Neither provider's structured-output mode enforces length or item limits, so
+ * a reply that obeys the schema must never be discarded for being long: the
+ * display limits are applied afterwards by `forDisplay`.
+ */
 export const ExplanationSchema = z.object({
-  headline: z.string().min(1).max(400),
-  e_step: z.string().min(1).max(1200),
-  m_step: z.string().min(1).max(1200),
-  log_likelihood: z.string().min(1).max(700),
-  caveats: z.array(z.string().max(400)).max(4),
+  headline: z.string(),
+  e_step: z.string(),
+  m_step: z.string(),
+  log_likelihood: z.string(),
+  caveats: z.array(z.string()),
 });
 
 export type Explanation = z.infer<typeof ExplanationSchema>;
+
+/** Display limits, in characters (caveats: items). */
+export const DISPLAY_LIMITS = {
+  headline: 400,
+  e_step: 1200,
+  m_step: 1200,
+  log_likelihood: 700,
+  caveat: 400,
+  caveats: 4,
+} as const;
+
+function clip(text: string, max: number): [string, boolean] {
+  return text.length > max ? [`${text.slice(0, max - 1).trimEnd()}…`, true] : [text, false];
+}
+
+/**
+ * The explanation as shown on screen: long fields cut at DISPLAY_LIMITS and at
+ * most four caveats. `shortened` says whether anything was cut; the full reply
+ * stays in the audit log and is what the grounding check reads.
+ */
+export function forDisplay(e: Explanation): { explanation: Explanation; shortened: boolean } {
+  let shortened = false;
+  const cut = (text: string, max: number) => {
+    const [out, was] = clip(text, max);
+    shortened ||= was;
+    return out;
+  };
+  const caveats = e.caveats
+    .slice(0, DISPLAY_LIMITS.caveats)
+    .map((c) => cut(c, DISPLAY_LIMITS.caveat));
+  if (e.caveats.length > DISPLAY_LIMITS.caveats) shortened = true;
+  return {
+    explanation: {
+      headline: cut(e.headline, DISPLAY_LIMITS.headline),
+      e_step: cut(e.e_step, DISPLAY_LIMITS.e_step),
+      m_step: cut(e.m_step, DISPLAY_LIMITS.m_step),
+      log_likelihood: cut(e.log_likelihood, DISPLAY_LIMITS.log_likelihood),
+      caveats,
+    },
+    shortened,
+  };
+}
 
 /** The same contract as JSON Schema, for the providers' structured-output modes. */
 export const EXPLANATION_JSON_SCHEMA: Record<string, unknown> = {
@@ -214,25 +262,79 @@ function collectNumbers(value: unknown, out: number[]) {
     Object.values(value).forEach((v) => collectNumbers(v, out));
 }
 
+const SUPERSCRIPT: Record<string, string> = {
+  "⁰": "0",
+  "¹": "1",
+  "²": "2",
+  "³": "3",
+  "⁴": "4",
+  "⁵": "5",
+  "⁶": "6",
+  "⁷": "7",
+  "⁸": "8",
+  "⁹": "9",
+  "⁻": "-",
+  "⁺": "+",
+};
+
+/**
+ * Rewrite scientific notation in its written forms as e-notation, so that
+ * "1.5 × 10⁻⁵", "1.5 x 10^-5", "10^-6" and "10⁻⁶" are read as 1.5e-5 and 1e-6.
+ */
+export function normaliseScientific(text: string): string {
+  return (
+    text
+      // superscript exponents (10⁻⁶, σ²) become ^-6, ^2
+      .replace(/[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `^${[...m].map((c) => SUPERSCRIPT[c]).join("")}`)
+      // mantissa × 10^k
+      .replace(
+        /(\d+(?:\.\d+)?)\s*[×x*·]\s*10\s*\^\s*\(?([-−+]?\d+)\)?/g,
+        (_m, mant: string, exp: string) => `${mant}e${exp}`,
+      )
+      // a bare power of ten, 10^k
+      .replace(
+        /(^|[^A-Za-z0-9_.])10\s*\^\s*\(?([-−+]?\d+)\)?/g,
+        (_m, pre: string, exp: string) => `${pre}1e${exp}`,
+      )
+  );
+}
+
+export interface WrittenNumber {
+  raw: string;
+  value: number;
+  /** digits after the decimal point in the mantissa */
+  decimals: number;
+  /** the power of ten in e-notation (0 when there is none) */
+  exponent: number;
+  scientific: boolean;
+}
+
 /** Numbers written in free text, skipping identifiers such as γ1 or mu2. */
-export function extractNumbers(text: string): { raw: string; value: number; decimals: number }[] {
-  const out: { raw: string; value: number; decimals: number }[] = [];
+export function extractNumbers(text: string): WrittenNumber[] {
+  const out: WrittenNumber[] = [];
   // the leading group stands in for a lookbehind: a number must not follow a letter, digit or dot
-  const re = /(^|[^A-Za-z0-9_.Ͱ-Ͽ₀-₉])([-−]?\d+(?:\.\d+)?(?:e[-−]?\d+)?)/g;
-  for (const m of text.matchAll(re)) {
+  const re = /(^|[^A-Za-z0-9_.Ͱ-Ͽ₀-₉])([-−]?\d+(?:\.\d+)?(?:[eE][-−+]?\d+)?)/g;
+  for (const m of normaliseScientific(text).matchAll(re)) {
     const raw = m[2].replace(/−/g, "-");
-    const mantissa = raw.split("e")[0];
+    const [mantissa, exp] = raw.split(/[eE]/);
     const decimals = mantissa.includes(".") ? mantissa.split(".")[1].length : 0;
-    out.push({ raw: m[2], value: Number(raw), decimals });
+    out.push({
+      raw: m[2],
+      value: Number(raw),
+      decimals,
+      exponent: exp === undefined ? 0 : Number(exp),
+      scientific: exp !== undefined,
+    });
   }
   return out;
 }
 
 /**
  * Numbers in `text` that cannot be matched (after rounding to the precision they
- * are written with) to any number in `snapshot`. Small integers (0 to 10) are
- * allowed: they are usually counts, ratings or ordinals ("two components").
- * Percentages are also matched as proportions (62% against 0.62).
+ * are written with, exponent included: 3.1e-2 means 0.031 ± 0.0005) to any
+ * number in `snapshot`. Whole numbers from 0 to 10 written without an exponent
+ * are not checked: they are usually counts, ratings or ordinals ("two
+ * components"). Percentages are also matched as proportions (62% against 0.62).
  */
 export function findUngroundedNumbers(text: string, snapshot: unknown): string[] {
   const known: number[] = [];
@@ -240,10 +342,15 @@ export function findUngroundedNumbers(text: string, snapshot: unknown): string[]
   const bad = new Set<string>();
   const proportions = known.map((k) => k * 100);
   for (const n of extractNumbers(text)) {
-    if (n.decimals === 0 && Math.abs(n.value) <= 10) continue;
-    const tol = 0.5 * 10 ** -n.decimals + 1e-9;
+    if (!n.scientific && n.decimals === 0 && Math.abs(n.value) <= 10) continue;
+    // half a unit in the last written digit, with a little room for float error
+    const tol = 0.5 * 10 ** (n.exponent - n.decimals) * (1 + 1e-6);
     const match = (k: number) => Math.abs(Math.abs(n.value) - Math.abs(k)) <= tol;
     if (!known.some(match) && !proportions.some(match)) bad.add(n.raw);
   }
   return [...bad];
 }
+
+/** What the grounding check covers, in the words used on screen and on /methods. */
+export const GROUNDING_SCOPE =
+  "numbers with decimals, numbers above 10 and anything in scientific notation; whole numbers from 0 to 10 are not checked";

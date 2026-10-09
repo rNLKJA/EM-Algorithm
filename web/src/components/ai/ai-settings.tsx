@@ -16,6 +16,7 @@ import {
 import {
   openAiSettings,
   setAiSettingsOpen,
+  takeAiSettingsReturnFocus,
   useAiSettings,
   useAiSettingsOpen,
 } from "@/hooks/use-ai-settings";
@@ -58,7 +59,16 @@ function AiSettingsDialog() {
   const open = useAiSettingsOpen();
   return (
     <Dialog open={open} onOpenChange={setAiSettingsOpen}>
-      <DialogContent>
+      <DialogContent
+        onCloseAutoFocus={(e) => {
+          // back to the button that opened the dialog (WCAG 2.4.3), not the top of the page
+          const target = takeAiSettingsReturnFocus();
+          if (target) {
+            e.preventDefault();
+            target.focus();
+          }
+        }}
+      >
         {open ? <SettingsForm onDone={() => setAiSettingsOpen(false)} /> : null}
       </DialogContent>
     </Dialog>

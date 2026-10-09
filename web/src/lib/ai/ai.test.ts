@@ -8,7 +8,13 @@ import { describe, expect, it, vi } from "vitest";
 import { README_INIT, README_RATINGS } from "../em/readme-example";
 import { eStep, logLikelihood, mStep } from "../em/em";
 import { notebookRun } from "../em/notebook-run";
-import { ANTHROPIC_URL, buildAnthropicBody, callAnthropic } from "./anthropic";
+import {
+  ANTHROPIC_URL,
+  buildAnthropicBody,
+  buildAnthropicHeaders,
+  callAnthropic,
+  FALLBACK_BETA,
+} from "./anthropic";
 import {
   createBrowserAuditStore,
   createIndexedDbAuditStore,
@@ -28,6 +34,8 @@ import {
   explanationToText,
   extractNumbers,
   findUngroundedNumbers,
+  forDisplay,
+  normaliseScientific,
 } from "./explain-iteration";
 import { createKeyStore, normaliseSettings, type StorageLike } from "./key-store";
 import { anthropicSupportsEffort, DEFAULT_SETTINGS, isValidModelId } from "./models";
@@ -119,6 +127,49 @@ describe("Anthropic adapter", () => {
     ).rejects.toMatchObject({ kind: "rate_limited" });
   });
 
+  it("opts Sonnet 5.5 into the server-side refusal fallback, and only Sonnet 5.5", () => {
+    const sonnet = baseReq({ model: "claude-sonnet-5-5" });
+    expect(buildAnthropicBody(sonnet).fallbacks).toBe("default");
+    expect(buildAnthropicHeaders(sonnet)["anthropic-beta"]).toBe(FALLBACK_BETA);
+    expect(FALLBACK_BETA).toBe("server-side-fallback-2026-07-01");
+    const haiku = baseReq();
+    expect(buildAnthropicBody(haiku)).not.toHaveProperty("fallbacks");
+    expect(buildAnthropicHeaders(haiku)).not.toHaveProperty("anthropic-beta");
+    // the key travels in the x-api-key header only, never in the body
+    expect(JSON.stringify(buildAnthropicBody(sonnet))).not.toContain(KEY);
+  });
+
+  it("keeps the reply, usage and model of a refused or truncated call for the audit log", async () => {
+    const call = (body: unknown) =>
+      callAnthropic(
+        baseReq({
+          model: "claude-sonnet-5-5",
+          fetchImpl: (async () => jsonResponse(body)) as unknown as typeof fetch,
+        }),
+      ).catch((e: AiError) => e);
+    const refused = (await call({
+      model: "claude-sonnet-5-5",
+      stop_reason: "refusal",
+      stop_details: { type: "refusal", category: "general_harms" },
+      content: [{ type: "text", text: "partial" }],
+      usage: { input_tokens: 900, output_tokens: 12 },
+    })) as AiError;
+    expect(refused.kind).toBe("refusal");
+    expect(refused.message).toMatch(/general_harms/);
+    expect(refused.raw).toBe("partial");
+    expect(refused.usage).toEqual({ input_tokens: 900, output_tokens: 12 });
+    expect(refused.model).toBe("claude-sonnet-5-5");
+    const cut = (await call({
+      model: "claude-sonnet-5-5",
+      stop_reason: "max_tokens",
+      content: [{ type: "text", text: '{"headline": "The gro' }],
+      usage: { input_tokens: 900, output_tokens: 4000 },
+    })) as AiError;
+    expect(cut.kind).toBe("truncated");
+    expect(cut.raw).toBe('{"headline": "The gro');
+    expect(cut.usage?.output_tokens).toBe(4000);
+  });
+
   it("reports network/CORS failures and cancellations", async () => {
     await expect(
       callAnthropic(
@@ -174,7 +225,21 @@ describe("OpenAI adapter", () => {
     ).rejects.toMatchObject({ kind: "refusal" });
     await expect(
       call(jsonResponse({ choices: [{ finish_reason: "length", message: { content: "{" } }] })),
-    ).rejects.toMatchObject({ kind: "truncated" });
+    ).rejects.toMatchObject({ kind: "truncated", raw: "{" });
+    await expect(
+      call(
+        jsonResponse({
+          model: "gpt-5-mini",
+          choices: [{ message: { refusal: "I can't help with that." } }],
+          usage: { prompt_tokens: 700, completion_tokens: 9 },
+        }),
+      ),
+    ).rejects.toMatchObject({
+      kind: "refusal",
+      raw: "I can't help with that.",
+      usage: { input_tokens: 700, output_tokens: 9 },
+      model: "gpt-5-mini",
+    });
   });
 });
 
@@ -221,6 +286,50 @@ describe("structured client", () => {
     expect(() => parseStructured(JSON.stringify({ headline: "x" }), ExplanationSchema)).toThrow(
       /schema/,
     );
+  });
+
+  it("keeps the raw reply and usage when the reply fails validation", async () => {
+    const bad = JSON.stringify({ headline: "only a headline" });
+    const err = await generateStructured({
+      provider: "anthropic",
+      apiKey: KEY,
+      model: "claude-haiku-4-5",
+      system: "s",
+      user: "u",
+      schemaName: "x",
+      jsonSchema: EXPLANATION_JSON_SCHEMA,
+      validator: ExplanationSchema,
+      fetchImpl: (async () =>
+        jsonResponse({
+          model: "claude-haiku-4-5",
+          content: [{ type: "text", text: bad }],
+          stop_reason: "end_turn",
+          usage: { input_tokens: 800, output_tokens: 20 },
+        })) as unknown as typeof fetch,
+    }).catch((e: AiError) => e);
+    expect(err).toBeInstanceOf(AiError);
+    expect((err as AiError).kind).toBe("invalid_output");
+    expect((err as AiError).raw).toBe(bad);
+    expect((err as AiError).usage).toEqual({ input_tokens: 800, output_tokens: 20 });
+    expect((err as AiError).model).toBe("claude-haiku-4-5");
+  });
+
+  it("accepts any reply that obeys the JSON schema, and shortens it only for display", () => {
+    const long = {
+      ...explanation,
+      e_step: "x".repeat(1500),
+      caveats: ["one", "two", "three", "four", "five"],
+    };
+    // the JSON schema sent to the provider has no item or length limits, so neither does zod
+    const parsed = parseStructured(JSON.stringify(long), ExplanationSchema);
+    expect(parsed.caveats).toHaveLength(5);
+    const shown = forDisplay(parsed);
+    expect(shown.shortened).toBe(true);
+    expect(shown.explanation.caveats).toEqual(["one", "two", "three", "four"]);
+    expect(shown.explanation.e_step.length).toBeLessThanOrEqual(1200);
+    expect(shown.explanation.e_step.endsWith("…")).toBe(true);
+    expect(forDisplay(explanation).shortened).toBe(false);
+    expect(forDisplay(explanation).explanation).toEqual(explanation);
   });
 
   it("explains errors in plain language", () => {
@@ -419,6 +528,40 @@ describe("explain this iteration", () => {
     expect(extractNumbers("gamma1 = 0.25, x2 and −1.5").map((n) => n.value)).toEqual([0.25, -1.5]);
     const text = explanationToText({ ...explanation, caveats: ["Only one iteration."] });
     expect(text).toContain("Caveat: Only one iteration.");
+  });
+
+  it("reads scientific notation, exponent included", () => {
+    expect(normaliseScientific("1.5 × 10⁻⁵ and 10^-6 and 2 x 10^(-3)")).toBe(
+      "1.5e-5 and 1e-6 and 2e-3",
+    );
+    expect(
+      extractNumbers("tolerance 1.0e-6").map((n) => [n.value, n.decimals, n.exponent]),
+    ).toEqual([[1e-6, 1, -6]]);
+    // the snapshot's tolerance is 1e-6, written in every common form
+    for (const ok of [
+      "below the tolerance 1e-6",
+      "below the tolerance 1.0e-6",
+      "below the tolerance 10^-6",
+      "below the tolerance 10⁻⁶",
+      "below the tolerance 1 × 10⁻⁶",
+      "below the tolerance 1E-06",
+    ])
+      expect(findUngroundedNumbers(ok, snapshot)).toEqual([]);
+  });
+
+  it("flags invented numbers in scientific notation", () => {
+    // 3.1e-2 means 0.031 ± 0.0005, not ± 0.05; integer mantissas are not small counts
+    expect(
+      findUngroundedNumbers("The change 3.1e-2 is above the tolerance 1.5e-5", snapshot),
+    ).toEqual(["3.1e-2", "1.5e-5"]);
+    expect(findUngroundedNumbers("The change 3e-2 is above 1e-5", snapshot)).toEqual([
+      "3e-2",
+      "1e-5",
+    ]);
+    expect(findUngroundedNumbers("a change of 2e-7", snapshot)).toEqual(["2e-7"]);
+    expect(findUngroundedNumbers("the tolerance is 10⁻⁵", snapshot)).toEqual(["1e-5"]);
+    // whole numbers from 0 to 10 written plainly are still left alone
+    expect(findUngroundedNumbers("two components and 7 ratings", snapshot)).toEqual([]);
   });
 
   it("the stepper's explainer start is covered too", () => {

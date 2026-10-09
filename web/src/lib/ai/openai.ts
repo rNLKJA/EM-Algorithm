@@ -63,19 +63,27 @@ export async function callOpenAi(req: StructuredRequest): Promise<ProviderRespon
 
   const data = (await res.json()) as OpenAiCompletion;
   const choice = data.choices?.[0];
-  if (choice?.message?.refusal) throw new AiError("refusal", "The model declined to answer");
+  const text = choice?.message?.content ?? "";
+  const model = data.model ?? req.model;
+  const usage =
+    data.usage && typeof data.usage.prompt_tokens === "number"
+      ? {
+          input_tokens: data.usage.prompt_tokens,
+          output_tokens: data.usage.completion_tokens ?? 0,
+        }
+      : null;
+  // these calls still cost tokens, so the reply and usage travel with the error
+  if (choice?.message?.refusal)
+    throw new AiError("refusal", "The model declined to answer", undefined, {
+      raw: choice.message.refusal,
+      usage,
+      model,
+    });
   if (choice?.finish_reason === "length")
-    throw new AiError("truncated", "The answer hit the token limit");
-  return {
-    text: choice?.message?.content ?? "",
-    model: data.model ?? req.model,
-    stopReason: choice?.finish_reason ?? null,
-    usage:
-      data.usage && typeof data.usage.prompt_tokens === "number"
-        ? {
-            input_tokens: data.usage.prompt_tokens,
-            output_tokens: data.usage.completion_tokens ?? 0,
-          }
-        : null,
-  };
+    throw new AiError("truncated", "The answer hit the token limit", undefined, {
+      raw: text,
+      usage,
+      model,
+    });
+  return { text, model, stopReason: choice?.finish_reason ?? null, usage };
 }

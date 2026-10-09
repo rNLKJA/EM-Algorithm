@@ -45,8 +45,38 @@ export function setAiSettingsOpen(open: boolean) {
   listeners.forEach((l) => l());
 }
 
+/*
+ * The dialog has no Radix trigger (any button can open it through this store),
+ * so Radix has nowhere to return focus on close and would drop it on <body>.
+ * Remember what had focus when it opened, and its id: the "Add your API key"
+ * button is replaced by "Explain" once a key is saved, and the replacement
+ * keeps the same id.
+ */
+let opener: { element: HTMLElement; id: string } | null = null;
+
 export function openAiSettings() {
+  if (typeof document !== "undefined") {
+    const el = document.activeElement;
+    opener = el instanceof HTMLElement && el !== document.body ? { element: el, id: el.id } : null;
+  }
   setAiSettingsOpen(true);
+}
+
+/**
+ * Where focus should go when the dialog closes (null: leave it to the dialog).
+ * A replacement that cannot take focus (the "Explain" button is disabled until
+ * the reader steps to an iteration) hands over to its panel, marked with
+ * `data-ai-focus-fallback`.
+ */
+export function takeAiSettingsReturnFocus(): HTMLElement | null {
+  const o = opener;
+  opener = null;
+  if (!o) return null;
+  const target = o.element.isConnected ? o.element : o.id ? document.getElementById(o.id) : null;
+  if (!target) return null;
+  if (target.matches(":disabled"))
+    return target.closest<HTMLElement>("[data-ai-focus-fallback]") ?? null;
+  return target;
 }
 
 export function useAiSettingsOpen(): boolean {

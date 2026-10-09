@@ -59,3 +59,13 @@ export function modelLabel(model: string): string {
 export function anthropicSupportsEffort(model: string): boolean {
   return !model.includes("haiku");
 }
+
+/**
+ * Claude Sonnet 5.5's safety classifiers can decline a request. With
+ * `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`, Claude API
+ * only) Anthropic re-runs a declined request on the model it recommends for
+ * that refusal category, within the same call. Haiku 4.5 does not take it.
+ */
+export function anthropicUsesFallback(model: string): boolean {
+  return model === "claude-sonnet-5-5";
+}

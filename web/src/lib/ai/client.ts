@@ -70,6 +70,14 @@ export async function generateStructured<T>(call: StructuredCall<T>): Promise<St
   const res: ProviderResponse =
     call.provider === "anthropic" ? await callAnthropic(req) : await callOpenAi(req);
   const latencyMs = Math.round(now() - t0);
-  const data = parseStructured(res.text, call.validator);
+  let data: T;
+  try {
+    data = parseStructured(res.text, call.validator);
+  } catch (e) {
+    // the reply arrived and cost tokens: keep it for the audit log
+    if (e instanceof AiError)
+      throw e.withDetails({ raw: res.text, usage: res.usage, model: res.model });
+    throw e;
+  }
   return { data, raw: res.text, model: res.model, usage: res.usage, latencyMs };
 }
