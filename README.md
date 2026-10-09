@@ -60,6 +60,8 @@ Rebuilding the notebook number for number turned up a few things. The originals 
 
 Everything is static or runs in the browser: no backend, database, account or API key.
 
+The port adds two things the notebook does not have, both off the notebook's path: an optional variance floor (for the collapse demo) and an early stop when a component collapses, meaning σ falls below 10⁻⁸ or the parameters stop being finite. Without that guard a collapsing run can freeze at σ ≈ 1.8 × 10⁻¹⁵, see |Δℓ| = 0 and report "converged" on an unbounded spike; the notebook's own run never gets near it (its σ stays above 0.6), so parity is unaffected.
+
 ## Repository structure
 
 ```text
@@ -73,8 +75,10 @@ EM-Algorithm/
 │   ├── _archive/              the first draft of the explainer
 │   └── pyproject.toml         black/isort settings used on the notebook
 ├── scripts/
-│   └── export_parity.py       re-runs the notebook and exports the parity artefacts (uv, PEP 723)
+│   ├── export_parity.py       re-runs the notebook and exports the parity artefacts (uv, PEP 723)
+│   └── make_og_fonts.py       converts the site's fonts to static TTFs for the Open Graph image
 └── web/                       the Next.js app (Vercel root)
+    ├── assets/og-fonts/       TTF fonts for opengraph-image.tsx (generated, OFL)
     ├── public/data/notebook-run.json   the notebook's data, random start and trace
     └── src/
         ├── app/               routes: /, /stepper, /playground, /pitfalls, /maths
@@ -114,6 +118,12 @@ Regenerate them with [uv](https://docs.astral.sh/uv/) (dependencies are declared
 
 ```bash
 uv run scripts/export_parity.py      # or: cd web && pnpm parity
+```
+
+The Open Graph image is drawn with the site's own fonts. `next/og` cannot read WOFF2 and draws variable fonts at their default weight, so [`scripts/make_og_fonts.py`](scripts/make_og_fonts.py) converts the self-hosted WOFF2 files into static TTFs in `web/assets/og-fonts/` (all SIL Open Font License; the licence texts sit beside them):
+
+```bash
+uv run scripts/make_og_fonts.py
 ```
 
 The data are synthetic, so there is nothing private in them. The "make your own" data on the site come from a seeded generator in the browser and are labelled as not the original.
