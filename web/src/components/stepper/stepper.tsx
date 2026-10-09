@@ -46,6 +46,17 @@ function stageTitle(stage: StepperStage): string {
   return `Iteration ${stage.iteration} · M-step: update what each group looks like`;
 }
 
+function stageAnnouncement(stage: StepperStage, last: boolean): string {
+  if (stage.kind === "init") return "Start: the initial guess.";
+  if (stage.kind === "e") return `Iteration ${stage.iteration}, E-step.`;
+  const end = last
+    ? Number.isFinite(stage.logLikelihood)
+      ? " Last step: the log-likelihood stopped changing."
+      : " Last step: the run broke down."
+    : "";
+  return `Iteration ${stage.iteration}, M-step. Log-likelihood ${smart(stage.logLikelihood, 4)}.${end}`;
+}
+
 export function Stepper({ formulas }: { formulas: StepperFormulas }) {
   const [preset, setPreset] = useState<PresetId>("readme");
   const [custom, setCustom] = useState<MixtureParams>({
@@ -246,6 +257,13 @@ export function Stepper({ formulas }: { formulas: StepperFormulas }) {
           <p className="num text-sm text-muted-foreground" aria-hidden>
             step {playback.index + 1} / {stages.length}
           </p>
+          {/* A short summary for screen readers, announced on manual steps and when
+              playback stops; the full stage panel is not a live region. */}
+          <p className="sr-only" aria-live="polite" aria-atomic>
+            {playback.playing
+              ? "Playing"
+              : stageAnnouncement(stage, playback.index === stages.length - 1)}
+          </p>
         </div>
         <ol className="mt-3 flex flex-wrap gap-1.5" aria-label="Stages">
           {stages.map((s, i) => (
@@ -278,7 +296,6 @@ export function Stepper({ formulas }: { formulas: StepperFormulas }) {
       </section>
 
       <section
-        aria-live="polite"
         aria-label="Current stage"
         className="sheet min-w-0 p-4 sm:p-6 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start"
       >

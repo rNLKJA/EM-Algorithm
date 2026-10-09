@@ -137,7 +137,12 @@ export function Playground() {
             />
           </div>
         </div>
-        <p className="mt-3 flex items-center gap-2 text-sm" aria-live="polite">
+        {/* Screen readers hear the status when playback stops or on a manual step, not
+            on every animation tick (up to 16 a second at 16×). */}
+        <p className="sr-only" aria-live="polite" aria-atomic>
+          {playback.playing ? "Playing" : `t = ${stage}. ${status}`}
+        </p>
+        <p className="mt-3 flex items-center gap-2 text-sm">
           {model.pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
           <span className="num shrink-0 self-start rounded bg-muted px-1.5 py-0.5 text-xs whitespace-nowrap">
             t = {stage}
