@@ -304,10 +304,23 @@ def main() -> int:
         },
     }
 
+    other_seeds = [simulate(cells, s, 15, 1e-4) for s in (0, 7, 2025)]
+    # The site quotes these: the notebook's own accuracy line under other seeds.
+    payload["otherSeeds"] = [
+        {
+            "seed": r["seed"],
+            "accuracyAsWritten": r["accuracyAsWritten"],
+            "accuracyMatched": r["accuracyMatched"],
+            "labelsSwapped": r["labelsSwapped"],
+            "final": r["iterations"][-1]["params"],
+        }
+        for r in other_seeds
+    ]
+
     fixture = {
         "$schema": "parity-fixtures/v1",
         "provenance": payload["provenance"] | {"note": "Extra traces for vitest only."},
-        "seeds": [simulate(cells, s, 15, 1e-4) for s in (0, 7, 2025)],
+        "seeds": other_seeds,
         "longRun": simulate(cells, 42, 500, 1e-4),
         "tightRun": simulate(cells, 3, 300, 1e-8),
         "readmeExample": readme_example(),
@@ -317,7 +330,7 @@ def main() -> int:
     OUT_FIXTURE.parent.mkdir(parents=True, exist_ok=True)
     OUT_RUN.write_text(json.dumps(payload, indent=1) + "\n", encoding="utf-8")
     OUT_FIXTURE.write_text(json.dumps(fixture, indent=1) + "\n", encoding="utf-8")
-    print(f"stdout of all 9 code cells matches the notebook; wrote:")
+    print("stdout of all 9 code cells matches the notebook; wrote:")
     print(f"  {OUT_RUN.relative_to(ROOT)} ({OUT_RUN.stat().st_size / 1024:.1f} KB)")
     print(f"  {OUT_FIXTURE.relative_to(ROOT)} ({OUT_FIXTURE.stat().st_size / 1024:.1f} KB)")
     print(

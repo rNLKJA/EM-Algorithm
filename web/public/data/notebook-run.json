@@ -853,5 +853,49 @@
   "fitCell": "Starting EM Algorithm...\n==================================================\n\n--- ITERATION 1 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.412\nAverage P(group 2): 0.588\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.412 (was 0.500)\n                 \u03c0\u2082 = 0.588 (was 0.500)\nMeans: \u03bc\u2081 = 4.536 (was 5.121)\n       \u03bc\u2082 = 7.386 (was 7.532)\nStd devs: \u03c3\u2081 = 1.220 (was 0.667)\n          \u03c3\u2082 = 1.616 (was 1.239)\n\nLog-likelihood: -425.50\n\n--- ITERATION 2 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.381\nAverage P(group 2): 0.619\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.381 (was 0.412)\n                 \u03c0\u2082 = 0.619 (was 0.588)\nMeans: \u03bc\u2081 = 4.340 (was 4.536)\n       \u03bc\u2082 = 7.366 (was 7.386)\nStd devs: \u03c3\u2081 = 1.424 (was 1.220)\n          \u03c3\u2082 = 1.384 (was 1.616)\n\nLog-likelihood: -417.92\nImprovement: 7.5786\n\n--- ITERATION 3 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.375\nAverage P(group 2): 0.625\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.375 (was 0.381)\n                 \u03c0\u2082 = 0.625 (was 0.619)\nMeans: \u03bc\u2081 = 4.264 (was 4.340)\n       \u03bc\u2082 = 7.383 (was 7.366)\nStd devs: \u03c3\u2081 = 1.425 (was 1.424)\n          \u03c3\u2082 = 1.312 (was 1.384)\n\nLog-likelihood: -417.22\nImprovement: 0.6936\n\n--- ITERATION 4 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.374\nAverage P(group 2): 0.626\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.374 (was 0.375)\n                 \u03c0\u2082 = 0.626 (was 0.625)\nMeans: \u03bc\u2081 = 4.223 (was 4.264)\n       \u03bc\u2082 = 7.400 (was 7.383)\nStd devs: \u03c3\u2081 = 1.391 (was 1.425)\n          \u03c3\u2082 = 1.283 (was 1.312)\n\nLog-likelihood: -416.98\nImprovement: 0.2434\n\n--- ITERATION 5 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.372\nAverage P(group 2): 0.628\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.372 (was 0.374)\n                 \u03c0\u2082 = 0.628 (was 0.626)\nMeans: \u03bc\u2081 = 4.193 (was 4.223)\n       \u03bc\u2082 = 7.409 (was 7.400)\nStd devs: \u03c3\u2081 = 1.361 (was 1.391)\n          \u03c3\u2082 = 1.269 (was 1.283)\n\nLog-likelihood: -416.86\nImprovement: 0.1227\n\n--- ITERATION 6 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.370\nAverage P(group 2): 0.630\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.370 (was 0.372)\n                 \u03c0\u2082 = 0.630 (was 0.628)\nMeans: \u03bc\u2081 = 4.169 (was 4.193)\n       \u03bc\u2082 = 7.413 (was 7.409)\nStd devs: \u03c3\u2081 = 1.339 (was 1.361)\n          \u03c3\u2082 = 1.261 (was 1.269)\n\nLog-likelihood: -416.79\nImprovement: 0.0659\n\n--- ITERATION 7 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.368\nAverage P(group 2): 0.632\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.368 (was 0.370)\n                 \u03c0\u2082 = 0.632 (was 0.630)\nMeans: \u03bc\u2081 = 4.149 (was 4.169)\n       \u03bc\u2082 = 7.411 (was 7.413)\nStd devs: \u03c3\u2081 = 1.323 (was 1.339)\n          \u03c3\u2082 = 1.257 (was 1.261)\n\nLog-likelihood: -416.75\nImprovement: 0.0421\n\n--- ITERATION 8 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.365\nAverage P(group 2): 0.635\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.365 (was 0.368)\n                 \u03c0\u2082 = 0.635 (was 0.632)\nMeans: \u03bc\u2081 = 4.131 (was 4.149)\n       \u03bc\u2082 = 7.408 (was 7.411)\nStd devs: \u03c3\u2081 = 1.310 (was 1.323)\n          \u03c3\u2082 = 1.257 (was 1.257)\n\nLog-likelihood: -416.72\nImprovement: 0.0332\n\n--- ITERATION 9 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.362\nAverage P(group 2): 0.638\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.362 (was 0.365)\n                 \u03c0\u2082 = 0.638 (was 0.635)\nMeans: \u03bc\u2081 = 4.114 (was 4.131)\n       \u03bc\u2082 = 7.403 (was 7.408)\nStd devs: \u03c3\u2081 = 1.300 (was 1.310)\n          \u03c3\u2082 = 1.257 (was 1.257)\n\nLog-likelihood: -416.69\nImprovement: 0.0302\n\n--- ITERATION 10 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.359\nAverage P(group 2): 0.641\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.359 (was 0.362)\n                 \u03c0\u2082 = 0.641 (was 0.638)\nMeans: \u03bc\u2081 = 4.098 (was 4.114)\n       \u03bc\u2082 = 7.396 (was 7.403)\nStd devs: \u03c3\u2081 = 1.290 (was 1.300)\n          \u03c3\u2082 = 1.259 (was 1.257)\n\nLog-likelihood: -416.66\nImprovement: 0.0292\n\n--- ITERATION 11 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.356\nAverage P(group 2): 0.644\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.356 (was 0.359)\n                 \u03c0\u2082 = 0.644 (was 0.641)\nMeans: \u03bc\u2081 = 4.083 (was 4.098)\n       \u03bc\u2082 = 7.390 (was 7.396)\nStd devs: \u03c3\u2081 = 1.282 (was 1.290)\n          \u03c3\u2082 = 1.262 (was 1.259)\n\nLog-likelihood: -416.63\nImprovement: 0.0290\n\n--- ITERATION 12 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.353\nAverage P(group 2): 0.647\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.353 (was 0.356)\n                 \u03c0\u2082 = 0.647 (was 0.644)\nMeans: \u03bc\u2081 = 4.067 (was 4.083)\n       \u03bc\u2082 = 7.383 (was 7.390)\nStd devs: \u03c3\u2081 = 1.273 (was 1.282)\n          \u03c3\u2082 = 1.264 (was 1.262)\n\nLog-likelihood: -416.60\nImprovement: 0.0290\n\n--- ITERATION 13 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.350\nAverage P(group 2): 0.650\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.350 (was 0.353)\n                 \u03c0\u2082 = 0.650 (was 0.647)\nMeans: \u03bc\u2081 = 4.052 (was 4.067)\n       \u03bc\u2082 = 7.376 (was 7.383)\nStd devs: \u03c3\u2081 = 1.265 (was 1.273)\n          \u03c3\u2082 = 1.267 (was 1.264)\n\nLog-likelihood: -416.57\nImprovement: 0.0291\n\n--- ITERATION 14 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.347\nAverage P(group 2): 0.653\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.347 (was 0.350)\n                 \u03c0\u2082 = 0.653 (was 0.650)\nMeans: \u03bc\u2081 = 4.037 (was 4.052)\n       \u03bc\u2082 = 7.369 (was 7.376)\nStd devs: \u03c3\u2081 = 1.257 (was 1.265)\n          \u03c3\u2082 = 1.270 (was 1.267)\n\nLog-likelihood: -416.54\nImprovement: 0.0292\n\n--- ITERATION 15 ---\n\n=== E-STEP ===\nPosterior probabilities computed for 200 users\nAverage P(group 1): 0.344\nAverage P(group 2): 0.656\n\n=== M-STEP ===\nMixing proportions: \u03c0\u2081 = 0.344 (was 0.347)\n                 \u03c0\u2082 = 0.656 (was 0.653)\nMeans: \u03bc\u2081 = 4.022 (was 4.037)\n       \u03bc\u2082 = 7.361 (was 7.369)\nStd devs: \u03c3\u2081 = 1.249 (was 1.257)\n          \u03c3\u2082 = 1.273 (was 1.270)\n\nLog-likelihood: -416.51\nImprovement: 0.0293\n\n==================================================\nFINAL RESULTS\n==================================================\n\nEstimated Parameters:\n  pi1: 0.344\n  pi2: 0.656\n  mu1: 4.022\n  mu2: 7.361\n  sigma1: 1.249\n  sigma2: 1.273\n\nTrue Parameters:\n  pi1: 0.600\n  pi2: 0.400\n  mu1: 7.500\n  mu2: 4.000\n  sigma1: 1.200\n  sigma2: 1.500\n",
   "accuracyCell": "Classification Accuracy: 90.5%\nFinal log-likelihood: -416.51\nTotal improvement: 8.98\n",
   "newUserCell": "EXAMPLE: Classify a new user\n========================================\nNew user rating: 8.5\nP(Sci-fi lover | rating=8.5): 0.001\nP(Romance lover | rating=8.5): 0.999\n\u2192 This user is likely a ROMANCE LOVER! (confidence: 99.9%)\n\nThis is how you use EM to make predictions on new data!\n"
- }
+ },
+ "otherSeeds": [
+  {
+   "seed": 0,
+   "accuracyAsWritten": 0.1,
+   "accuracyMatched": 0.9,
+   "labelsSwapped": false,
+   "final": {
+    "pi1": 0.6843875536496793,
+    "pi2": 0.3156124463503206,
+    "mu1": 7.176304415937373,
+    "mu2": 3.164223250161129,
+    "sigma1": 1.2748900949627509,
+    "sigma2": 1.0864592316282322
+   }
+  },
+  {
+   "seed": 7,
+   "accuracyAsWritten": 0.63,
+   "accuracyMatched": 0.37,
+   "labelsSwapped": false,
+   "final": {
+    "pi1": 0.19962132452076056,
+    "pi2": 0.8003786754792394,
+    "mu1": 7.758690608018303,
+    "mu2": 5.760403718852537,
+    "sigma1": 1.1604060517516663,
+    "sigma2": 2.077476903154509
+   }
+  },
+  {
+   "seed": 2025,
+   "accuracyAsWritten": 0.955,
+   "accuracyMatched": 0.955,
+   "labelsSwapped": true,
+   "final": {
+    "pi1": 0.4565075472016514,
+    "pi2": 0.5434924527983486,
+    "mu1": 4.673724011916073,
+    "mu2": 7.0990355347112715,
+    "sigma1": 2.1255936636463355,
+    "sigma2": 1.4598565106942136
+   }
+  }
+ ]
 }
