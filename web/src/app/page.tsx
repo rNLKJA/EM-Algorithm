@@ -391,7 +391,8 @@ export default function Home() {
               <div>
                 <dt className="text-muted-foreground">When</dt>
                 <dd className="mt-0.5 font-medium">
-                  September 2025 (explainer and notebook), October 2026 (this site)
+                  September 2025 (explainer and notebook, last edited June 2026), October 2026 (this
+                  site)
                 </dd>
               </div>
               <div>
