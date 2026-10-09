@@ -2,11 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AuditLogView } from "@/components/ai/audit-log-view";
 import { PageHeader } from "@/components/common/page-header";
+import { pageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "AI audit log",
-  description:
-    "Every optional AI call made from this browser: the input sent, the output, provider, model, latency, token usage and your decision. Stored locally in IndexedDB, exportable as JSON or CSV.",
+  ...pageMetadata({
+    title: "AI audit log",
+    description:
+      "Every optional AI call made from this browser: the input sent, the output, provider, model, latency, token usage and your decision. Stored locally in IndexedDB, exportable as JSON or CSV.",
+    path: "/ai-log",
+  }),
   robots: { index: false },
 };
 

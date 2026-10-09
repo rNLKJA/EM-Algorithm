@@ -11,14 +11,15 @@ import { loadDecisionRecords, loadModelCard } from "@/lib/content";
 import { notebookRun } from "@/lib/em/notebook-run";
 import { inference } from "@/lib/inference/results";
 import { INFERENCE_SETTINGS } from "@/lib/inference/settings";
-import { repoFile, site } from "@/lib/site";
+import { pageMetadata, repoFile, site } from "@/lib/site";
 import { wilsonInterval } from "@/lib/stats/intervals";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Methods: data, decisions and the model card",
   description:
     "How the numbers on this site were made: data provenance, the EM method and the inference added in 2026, the evaluation design, assumptions and limitations, decision records, the model card and the AI use statement.",
-};
+  path: "/methods",
+});
 
 const TOC = [
   { id: "data", label: "Data provenance" },

@@ -18,14 +18,15 @@ import { inference } from "@/lib/inference/results";
 import { INFERENCE_SETTINGS } from "@/lib/inference/settings";
 import { toTheta } from "@/lib/inference/uncertainty";
 import { sci } from "@/lib/format";
-import { repoFile } from "@/lib/site";
+import { pageMetadata, repoFile } from "@/lib/site";
 import { wilsonInterval } from "@/lib/stats/intervals";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Inference: how sure, how many, how stable",
   description:
     "Standard errors and parametric-bootstrap intervals for the notebook's mixture, a coverage study of those intervals, choosing the number of components by AIC, BIC and a bootstrap likelihood-ratio test, and convergence diagnostics across random starts.",
-};
+  path: "/inference",
+});
 
 const SECTIONS = [
   { id: "uncertainty", title: "Uncertainty", blurb: "Standard errors and bootstrap intervals." },
