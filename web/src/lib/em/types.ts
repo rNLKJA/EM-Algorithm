@@ -13,7 +13,6 @@ export interface MixtureParams {
 }
 
 export const PARAM_KEYS = ["pi1", "pi2", "mu1", "mu2", "sigma1", "sigma2"] as const;
-export type ParamKey = (typeof PARAM_KEYS)[number];
 
 export interface EStepResult {
   /** pi_1 * f(x_i | mu_1, sigma_1), the notebook's `numerator1` */

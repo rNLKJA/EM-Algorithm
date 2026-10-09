@@ -1,17 +1,9 @@
-const SQRT_2PI = Math.sqrt(2 * Math.PI);
-
 /**
  * Normal density, written in the same order as the notebook's `normal_pdf`:
  * `(1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)`.
  */
 export function normalPdf(x: number, mu: number, sigma: number): number {
   return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - mu) / sigma) ** 2);
-}
-
-/** log of the normal density, computed stably (used for reporting tiny densities). */
-export function normalLogPdf(x: number, mu: number, sigma: number): number {
-  const z = (x - mu) / sigma;
-  return -0.5 * z * z - Math.log(sigma * SQRT_2PI);
 }
 
 /** Beta(alpha, beta) density on [0, 1]; zero outside. Integer-friendly via log-gamma. */

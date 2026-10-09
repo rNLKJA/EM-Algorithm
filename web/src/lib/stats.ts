@@ -14,16 +14,6 @@ export function std(values: ArrayLike<number>): number {
   return values.length ? Math.sqrt(s / values.length) : Number.NaN;
 }
 
-export function extent(values: ArrayLike<number>): [number, number] {
-  let lo = Infinity;
-  let hi = -Infinity;
-  for (let i = 0; i < values.length; i++) {
-    if (values[i] < lo) lo = values[i];
-    if (values[i] > hi) hi = values[i];
-  }
-  return [lo, hi];
-}
-
 export function linspace(start: number, stop: number, count: number): number[] {
   if (count < 2) return [start];
   const step = (stop - start) / (count - 1);
