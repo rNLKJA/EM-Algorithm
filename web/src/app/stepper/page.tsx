@@ -7,13 +7,14 @@ import { M, MathBlock } from "@/components/maths/tex";
 import { Stepper } from "@/components/stepper/stepper";
 import { CORRECTIONS } from "@/lib/em/corrections";
 import { smart } from "@/lib/format";
-import { repoFile } from "@/lib/site";
+import { pageMetadata, repoFile } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Stepper: four ratings, by hand",
   description:
     "Step through the explainer's hand-worked EM example on the ratings 2, 3, 7 and 8: E-step responsibilities, M-step updates and the exact numbers beside the hand-worked ones.",
-};
+  path: "/stepper",
+});
 
 export default function StepperPage() {
   const readmeCorrections = CORRECTIONS.filter((c) => c.id.startsWith("readme"));
