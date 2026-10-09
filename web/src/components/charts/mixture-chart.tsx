@@ -3,7 +3,7 @@
 import { useCallback, useId, useMemo, useRef, type KeyboardEvent, type PointerEvent } from "react";
 import { useElementWidth } from "@/hooks/use-element-width";
 import { jitter, pointFill, triangle } from "@/lib/charts/marks";
-import { linePath, linearScale, niceTicks } from "@/lib/charts/scale";
+import { areaPath, linePath, linearScale, niceTicks } from "@/lib/charts/scale";
 import { eStep, mixtureDensity } from "@/lib/em/em";
 import { normalPdf } from "@/lib/em/gaussian";
 import type { MixtureParams } from "@/lib/em/types";
@@ -119,6 +119,17 @@ export function MixtureChart({
 
   const pathOf = (values: number[]) =>
     linePath(grid.map((v, i) => [x(v), y(Math.min(values[i], top * 4))]));
+  // a collapsed component (sigma = 0) has NaN densities: its paths come out empty and are skipped
+  const c1Path = pathOf(curves.c1);
+  const c2Path = pathOf(curves.c2);
+  const paths = {
+    tru: curves.tru ? pathOf(curves.tru) : "",
+    c1: c1Path,
+    c2: c2Path,
+    mix: pathOf(curves.mix),
+    area1: areaPath(c1Path, x(domain[0]), x(domain[1]), baseline),
+    area2: areaPath(c2Path, x(domain[0]), x(domain[1]), baseline),
+  };
 
   const clampMean = (v: number) => Math.min(domain[1] - 0.25, Math.max(domain[0] + 0.25, v));
 
@@ -186,7 +197,8 @@ export function MixtureChart({
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        role="img"
+        // children of role="img" are presentational, which would hide the slider handles
+        role={draggable ? "group" : "img"}
         aria-label={ariaLabel}
         className="block max-w-full overflow-visible"
       >
@@ -242,9 +254,9 @@ export function MixtureChart({
         </g>
 
         <g clipPath={`url(#${clipId})`} aria-hidden>
-          {curves.tru && (
+          {paths.tru && (
             <path
-              d={pathOf(curves.tru)}
+              d={paths.tru}
               fill="none"
               stroke="currentColor"
               strokeOpacity={0.45}
@@ -253,31 +265,27 @@ export function MixtureChart({
               strokeLinecap="round"
             />
           )}
-          <path
-            d={`${pathOf(curves.c1)}L${x(domain[1])},${baseline}L${x(domain[0])},${baseline}Z`}
-            fill="var(--comp-1)"
-            fillOpacity={0.1}
-          />
-          <path
-            d={`${pathOf(curves.c2)}L${x(domain[1])},${baseline}L${x(domain[0])},${baseline}Z`}
-            fill="var(--comp-2)"
-            fillOpacity={0.1}
-          />
-          <path d={pathOf(curves.c1)} fill="none" stroke="var(--comp-1)" strokeWidth={2.25} />
-          <path
-            d={pathOf(curves.c2)}
-            fill="none"
-            stroke="var(--comp-2)"
-            strokeWidth={2.25}
-            strokeDasharray="7 4"
-          />
-          <path
-            d={pathOf(curves.mix)}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2.5}
-            strokeOpacity={0.9}
-          />
+          {paths.area1 && <path d={paths.area1} fill="var(--comp-1)" fillOpacity={0.1} />}
+          {paths.area2 && <path d={paths.area2} fill="var(--comp-2)" fillOpacity={0.1} />}
+          {paths.c1 && <path d={paths.c1} fill="none" stroke="var(--comp-1)" strokeWidth={2.25} />}
+          {paths.c2 && (
+            <path
+              d={paths.c2}
+              fill="none"
+              stroke="var(--comp-2)"
+              strokeWidth={2.25}
+              strokeDasharray="7 4"
+            />
+          )}
+          {paths.mix && (
+            <path
+              d={paths.mix}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              strokeOpacity={0.9}
+            />
+          )}
         </g>
 
         {/* x axis */}

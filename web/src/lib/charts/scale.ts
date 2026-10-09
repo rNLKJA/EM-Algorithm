@@ -54,6 +54,16 @@ export function linePath(points: [number, number][]): string {
   return d;
 }
 
+/**
+ * Close a line from `linePath` down to a baseline so it can be filled. Returns ""
+ * when the line is empty (e.g. every density is NaN because sigma is 0), so callers
+ * never emit a path that starts with "L" (an invalid SVG path).
+ */
+export function areaPath(line: string, x0: number, x1: number, baseline: number): string {
+  if (!line.startsWith("M")) return "";
+  return `${line}L${x1.toFixed(2)},${baseline.toFixed(2)}L${x0.toFixed(2)},${baseline.toFixed(2)}Z`;
+}
+
 /** Interpolate two colours given as #rrggbb. */
 export function mixHex(a: string, b: string, t: number): string {
   const pa = parseInt(a.slice(1), 16);

@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { linePath, linearScale } from "@/lib/charts/scale";
+import { areaPath, linePath, linearScale } from "@/lib/charts/scale";
 import { eStep } from "@/lib/em/em";
 import { normalPdf } from "@/lib/em/gaussian";
 import type { MixtureParams } from "@/lib/em/types";
@@ -69,8 +69,7 @@ export function StaticMixture({
   const baseline = pad.top + innerH;
   const path = (vals: number[]) =>
     linePath(grid.map((v, i) => [x(v), y(Math.min(vals[i], top * 3))]));
-  const area = (vals: number[]) =>
-    `${path(vals)}L${x(domain[1])},${baseline}L${x(domain[0])},${baseline}Z`;
+  const area = (vals: number[]) => areaPath(path(vals), x(domain[0]), x(domain[1]), baseline);
   const gamma1 = rug ? eStep(data, params).gamma1 : null;
   const clip = useId();
 
@@ -111,31 +110,28 @@ export function StaticMixture({
             vectorEffect="non-scaling-stroke"
           />
         )}
-        <path d={area(c1)} fill="var(--comp-1)" fillOpacity={0.12} />
-        <path d={area(c2)} fill="var(--comp-2)" fillOpacity={0.12} />
-        <path
-          d={path(c1)}
-          fill="none"
-          stroke="var(--comp-1)"
-          strokeWidth={2.25}
-          vectorEffect="non-scaling-stroke"
-        />
-        <path
-          d={path(c2)}
-          fill="none"
-          stroke="var(--comp-2)"
-          strokeWidth={2.25}
-          strokeDasharray="7 4"
-          vectorEffect="non-scaling-stroke"
-        />
-        <path
-          d={path(mix)}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          strokeOpacity={0.9}
-          vectorEffect="non-scaling-stroke"
-        />
+        {[
+          { id: "a1", d: area(c1), fill: "var(--comp-1)" },
+          { id: "a2", d: area(c2), fill: "var(--comp-2)" },
+        ].map((a) => (a.d ? <path key={a.id} d={a.d} fill={a.fill} fillOpacity={0.12} /> : null))}
+        {[
+          { id: "c1", d: path(c1), stroke: "var(--comp-1)", width: 2.25, dash: undefined, op: 1 },
+          { id: "c2", d: path(c2), stroke: "var(--comp-2)", width: 2.25, dash: "7 4", op: 1 },
+          { id: "mix", d: path(mix), stroke: "currentColor", width: 2.5, dash: undefined, op: 0.9 },
+        ].map((l) =>
+          l.d ? (
+            <path
+              key={l.id}
+              d={l.d}
+              fill="none"
+              stroke={l.stroke}
+              strokeWidth={l.width}
+              strokeDasharray={l.dash}
+              strokeOpacity={l.op}
+              vectorEffect="non-scaling-stroke"
+            />
+          ) : null,
+        )}
       </g>
       <line
         x1={pad.left}
