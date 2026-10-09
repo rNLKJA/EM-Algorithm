@@ -3,6 +3,7 @@ import { GithubMark } from "./github-mark";
 import { LogoMark } from "./logo-mark";
 import { MobileNav, SiteNav } from "./site-nav";
 import { ThemeToggle } from "./theme-toggle";
+import { AiSettingsButton } from "@/components/ai/ai-settings";
 import { site } from "@/lib/site";
 
 export function SiteHeader() {
@@ -33,6 +34,7 @@ export function SiteHeader() {
           >
             <GithubMark className="size-4" />
           </a>
+          <AiSettingsButton />
           <ThemeToggle />
           <MobileNav />
         </div>

@@ -2,6 +2,7 @@
 
 import { Dices, Loader2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { ExplainIteration } from "@/components/ai/explain-iteration";
 import { LineChart } from "@/components/charts/line-chart";
 import { MixtureChart } from "@/components/charts/mixture-chart";
 import { Callout } from "@/components/common/callout";
@@ -14,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { usePlayback } from "@/hooks/use-playback";
 import { useTweenedParams } from "@/hooks/use-tweened-params";
-import { isNonDecreasing, isNonDegenerate, logLikelihood, paramsAt } from "@/lib/em/em";
+import type { IterationInput } from "@/lib/ai/explain-iteration";
+import { eStep, isNonDecreasing, isNonDegenerate, logLikelihood, paramsAt } from "@/lib/em/em";
 import { pyFixed, sci } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Results } from "./results";
@@ -91,6 +93,37 @@ export function Playground() {
   })();
 
   const componentLabels: [string, string] = ["component 1", "component 2"];
+
+  const explainInput = useMemo((): IterationInput | null => {
+    if (!result || stage < 1 || llValues.length <= stage) return null;
+    const n = result.iterations.length;
+    const before = paramsAt(result, stage - 1);
+    return {
+      source: "playground",
+      dataset: dataset.original
+        ? "The notebook's 200 synthetic ratings (np.random.seed(42), clipped to 1 to 10)"
+        : `${dataset.ratings.length} ratings generated in the browser (seed ${config.gen.seed}); not the notebook's data`,
+      data: dataset.ratings,
+      iteration: stage,
+      before,
+      after: paramsAt(result, stage),
+      e: eStep(dataset.ratings, before),
+      logLikelihoodBefore: llValues[stage - 1],
+      logLikelihoodAfter: llValues[stage],
+      stopping: {
+        tolerance: config.tolerance,
+        maxIterations: config.maxIterations,
+        status:
+          stage < n
+            ? "continuing"
+            : result.stopReason === "converged"
+              ? "converged"
+              : result.stopReason === "degenerate"
+                ? "collapsed"
+                : "stopped-at-cap",
+      },
+    };
+  }, [result, stage, llValues, dataset, config.gen.seed, config.tolerance, config.maxIterations]);
 
   return (
     // DOM order is the phone order: chart and playback, then the settings, then the
@@ -442,6 +475,11 @@ export function Playground() {
             </p>
           )}
         </section>
+
+        <ExplainIteration
+          input={explainInput}
+          context={`${config.source}:${config.gen.seed}:${config.init}:${config.initSeed}:${JSON.stringify(config.manual)}:${config.maxIterations}:${config.tolerance}:${config.floorOn ? config.floor : 0}:${stage}`}
+        />
 
         {result && (
           <Results

@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef } from "react";
 import { fit } from "@/lib/em/em";
 import { runRestarts, type RestartConfig, type RestartSummary } from "@/lib/em/restarts";
+import {
+  runInferenceTask,
+  type InferenceTask,
+  type InferenceTaskResult,
+} from "@/lib/inference/tasks";
 import type { FitResult } from "@/lib/em/types";
 import type { FitPayload, WorkerRequest, WorkerResponse } from "@/workers/protocol";
 
@@ -103,5 +108,11 @@ export function useEmWorker() {
     [post],
   );
 
-  return { runFit, runRestarts: runRestartsAsync };
+  const runInference = useCallback(
+    (payload: InferenceTask) =>
+      post<InferenceTaskResult>({ kind: "inference", payload }, () => runInferenceTask(payload)),
+    [post],
+  );
+
+  return { runFit, runRestarts: runRestartsAsync, runInference };
 }

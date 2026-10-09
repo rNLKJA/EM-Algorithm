@@ -13,7 +13,9 @@ export const nav = [
   { href: "/stepper", label: "Stepper", blurb: "Four ratings, by hand" },
   { href: "/playground", label: "Playground", blurb: "200 ratings, live" },
   { href: "/pitfalls", label: "Pitfalls", blurb: "Where EM goes wrong" },
+  { href: "/inference", label: "Inference", blurb: "How sure, how many" },
   { href: "/maths", label: "Maths", blurb: "The derivations" },
+  { href: "/methods", label: "Methods", blurb: "Decisions and the model card" },
 ] as const;
 
 export function repoFile(path: string): string {

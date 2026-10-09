@@ -11,7 +11,14 @@ import { finalResultsConsole, fitConsole } from "@/lib/em/notebook-console";
 import { notebookRun } from "@/lib/em/notebook-run";
 import { PARAM_KEYS, type FitResult, type MixtureParams } from "@/lib/em/types";
 import { pyPercent, sci, smart } from "@/lib/format";
+import { wilsonInterval } from "@/lib/stats/intervals";
 import { cn } from "@/lib/utils";
+
+/** Wilson 95% interval for an accuracy measured on n ratings. */
+function wilsonText(accuracy: number, n: number) {
+  const w = wilsonInterval(Math.round(accuracy * n), n);
+  return `${pyPercent(w.lower)} to ${pyPercent(w.upper)}`;
+}
 import type { Dataset } from "./use-playground";
 
 export function Results({
@@ -117,6 +124,9 @@ export function Results({
             <div className="rounded-xl border p-3">
               <dt className="text-xs text-muted-foreground">matched by mean</dt>
               <dd className="num mt-1 text-2xl font-medium">{pyPercent(accMatched)}</dd>
+              <dd className="num mt-1 text-[0.72rem] text-muted-foreground">
+                95% CI {wilsonText(accMatched, gamma1.length)}
+              </dd>
             </div>
             <div className="rounded-xl border p-3">
               <dt className="text-xs text-muted-foreground">as the notebook computes it</dt>
@@ -128,6 +138,9 @@ export function Results({
               >
                 {pyPercent(accWritten)}
               </dd>
+              <dd className="num mt-1 text-[0.72rem] text-muted-foreground">
+                95% CI {wilsonText(accWritten, gamma1.length)}
+              </dd>
             </div>
           </dl>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -137,7 +150,8 @@ export function Results({
               ? " Here they have not, which is why the two disagree."
               : " Here they agree."}{" "}
             Responsibilities are taken from the E-step of iteration {Math.max(1, stage)}, like the
-            notebook&apos;s <span className="num">em.gamma1</span>.
+            notebook&apos;s <span className="num">em.gamma1</span>. The intervals are Wilson 95%
+            intervals over the {gamma1.length} ratings.
           </p>
         </section>
       </div>

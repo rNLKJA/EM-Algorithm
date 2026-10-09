@@ -1,0 +1,585 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { Callout } from "@/components/common/callout";
+import { PageHeader } from "@/components/common/page-header";
+import { ScrollX } from "@/components/common/scroll-x";
+import { BootstrapSection } from "@/components/inference/bootstrap-section";
+import { ConvergenceSection } from "@/components/inference/convergence-section";
+import { CoverageSection } from "@/components/inference/coverage-section";
+import { count, fmt, pct, pctInterval } from "@/components/inference/format";
+import { LrtPlot } from "@/components/inference/lrt-plot";
+import { M, MathBlock } from "@/components/maths/tex";
+import { fit } from "@/lib/em/em";
+import { notebookFinal, notebookRun } from "@/lib/em/notebook-run";
+import type { KRow } from "@/lib/inference/model-choice";
+import { inference } from "@/lib/inference/results";
+import { INFERENCE_SETTINGS } from "@/lib/inference/settings";
+import { toTheta } from "@/lib/inference/uncertainty";
+import { sci } from "@/lib/format";
+import { repoFile } from "@/lib/site";
+import { wilsonInterval } from "@/lib/stats/intervals";
+
+export const metadata: Metadata = {
+  title: "Inference: how sure, how many, how stable",
+  description:
+    "Standard errors and parametric-bootstrap intervals for the notebook's mixture, a coverage study of those intervals, choosing the number of components by AIC, BIC and a bootstrap likelihood-ratio test, and convergence diagnostics across random starts.",
+};
+
+const SECTIONS = [
+  { id: "uncertainty", title: "Uncertainty", blurb: "Standard errors and bootstrap intervals." },
+  { id: "coverage", title: "Coverage", blurb: "Do 95% intervals cover 95% of the time?" },
+  { id: "choosing-k", title: "Choosing K", blurb: "AIC, BIC and a bootstrap LRT." },
+  { id: "convergence", title: "Convergence", blurb: "Ascent, speed and restarts." },
+];
+
+function Section({
+  id,
+  index,
+  title,
+  children,
+}: {
+  id: string;
+  index: number;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-20 border-t pt-12">
+      <p className="eyebrow">question {index}</p>
+      <h2 id={`${id}-h`} className="mt-2 text-3xl font-semibold sm:text-4xl">
+        {title}
+      </h2>
+      <div className="mt-6 space-y-6">{children}</div>
+    </section>
+  );
+}
+
+function gmmSummary(r: KRow) {
+  if (!r.params) return "no fit";
+  return r.params.means
+    .map(
+      (m, k) =>
+        `${fmt(100 * r.params!.weights[k], 0)}% at ${fmt(m, 2)} (σ ${fmt(r.params!.sds[k], 2)})`,
+    )
+    .join(" · ");
+}
+
+export default function InferencePage() {
+  const a = inference;
+  const s = INFERENCE_SETTINGS;
+  const truth = toTheta(notebookRun.trueParams);
+  const notebook15 = toTheta(notebookFinal);
+  const toTol = fit(notebookRun.ratings, notebookRun.init, {
+    maxIterations: 1000,
+    tolerance: notebookRun.fit.tolerance,
+  }).iterations.length;
+
+  const misses = (lo: (j: number) => number, hi: (j: number) => number) =>
+    truth.filter((t, j) => t < lo(j) || t > hi(j)).length;
+  const waldMisses = a.mle.wald
+    ? misses(
+        (j) => a.mle.wald![j].lower,
+        (j) => a.mle.wald![j].upper,
+      )
+    : 0;
+  const bootMisses = misses(
+    (j) => a.bootstrap.intervals[j].lower,
+    (j) => a.bootstrap.intervals[j].upper,
+  );
+  const other = a.otherMaximum;
+
+  const covRange = (rates: number[]) =>
+    `${pct(Math.min(...rates), 0)} and ${pct(Math.max(...rates), 0)}`;
+  const waldRates = a.coverage.model.params.map((p) => p.wald.coverage.estimate);
+  const bootRates = a.bootstrapCoverage.params.map((p) => p.bootstrap!.coverage.estimate);
+
+  const full = a.modelChoice.full;
+  const trimmed = a.modelChoice.withoutClipped;
+  const k4 = full.rows.find((r) => r.K === 4)?.params;
+  const lrt = a.lrt;
+  const naive = wilsonInterval(lrt.naiveRejections, lrt.options.B);
+  const ic = a.initComparison;
+  const faster = wilsonInterval(ic.iterations.difference.aHigher, ic.iterations.difference.n);
+
+  return (
+    <>
+      <PageHeader eyebrow="Inference" title="How sure? How many? How stable?">
+        <p>
+          The notebook printed point estimates. This page asks the questions a statistician would
+          ask next: how precise those estimates are, whether the intervals around them can be
+          trusted, how many groups the data support, and whether EM&apos;s answer depends on where
+          it starts. Every number is precomputed with the seeds shown, and the fast ones can be
+          re-run in your browser.
+        </p>
+      </PageHeader>
+
+      <div className="mx-auto max-w-6xl space-y-16 px-4 sm:px-6">
+        <nav aria-label="Questions on this page">
+          <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {SECTIONS.map((sec, i) => (
+              <li key={sec.id}>
+                <a
+                  href={`#${sec.id}`}
+                  className="sheet block h-full p-4 transition-colors hover:border-foreground/30"
+                >
+                  <span className="num text-xs text-muted-foreground">0{i + 1}</span>
+                  <span className="mt-1 block font-heading text-lg font-semibold">{sec.title}</span>
+                  <span className="mt-1 block text-sm text-muted-foreground">{sec.blurb}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+
+        <Section id="uncertainty" index={1} title="How sure are the fitted parameters?">
+          <div className="prose-notebook">
+            <p>
+              Standard errors only mean something at a maximum of the likelihood, and the
+              notebook&apos;s 15 iterations had not reached one. So the run is finished first: same
+              data, same random start, until the log-likelihood moves by less than 10⁻¹⁰ (
+              {a.mle.iterations} iterations, ℓ = {fmt(a.mle.logLikelihood, 3)}). The notebook&apos;s
+              own estimates stay in the first column, unchanged. Components are ordered by mean (
+              <Link href="/methods#dr-002">DR-002</Link>): component 1 is the low group, the
+              notebook&apos;s romance lovers.
+            </p>
+            <p>
+              Two kinds of uncertainty sit beside each estimate. The <strong>Hessian</strong>{" "}
+              standard error measures how sharply the log-likelihood falls away from its peak: the
+              observed information (minus the matrix of second derivatives of ℓ at the maximum),
+              inverted. It gives a Wald interval,{" "}
+              <M>{String.raw`\hat\theta \pm 1.96\,\mathrm{SE}`}</M>. The{" "}
+              <strong>parametric bootstrap</strong> simulates {count(a.bootstrap.B)} new data sets
+              of 200 ratings from the fitted mixture, refits EM to each and reads the 2.5% and 97.5%
+              points of the {count(a.bootstrap.B)} estimates.
+            </p>
+          </div>
+
+          <BootstrapSection
+            mle={a.mle}
+            notebook15={notebook15}
+            truth={truth}
+            published={a.bootstrap}
+          />
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Callout variant="correction" title="This sample's intervals miss the truth">
+              {waldMisses} of 5 Wald intervals and {bootMisses} of 5 bootstrap intervals exclude the
+              value used to generate the data. The converged fit gives the low group a share of{" "}
+              {fmt(a.mle.theta[0], 2)} against a true 0.4. One data set cannot tell bad luck from
+              bad intervals; the coverage study below can.
+            </Callout>
+            {other ? (
+              <Callout title="A second, higher maximum">
+                {other.startsReaching} of {other.starts} random starts reach a different maximum, ℓ
+                = {fmt(other.logLikelihood, 2)}, higher by{" "}
+                {fmt(other.logLikelihood - a.mle.logLikelihood, 2)}: a broad component (
+                {fmt(100 * other.theta[0], 0)}% at {fmt(other.theta[1], 2)}, σ{" "}
+                {fmt(other.theta[3], 2)}) plus a narrow one at {fmt(other.theta[2], 2)} (σ{" "}
+                {fmt(other.theta[4], 2)}). The intervals above describe the notebook&apos;s maximum
+                only. When two peaks are this close in height, intervals around one of them
+                understate the uncertainty.
+              </Callout>
+            ) : null}
+          </div>
+        </Section>
+
+        <Section id="coverage" index={2} title="Do the 95% intervals cover 95% of the time?">
+          <div className="prose-notebook">
+            <p>
+              A 95% interval should contain the true value in 95% of repeated samples. That is
+              checkable: simulate data sets from the notebook&apos;s true mixture (60% at 7.5 with σ
+              1.2, 40% at 4.0 with σ 1.5, n = 200), fit each by EM from a k-means++ start, build the
+              intervals and count. {count(a.coverage.model.S)} data sets per scenario for Wald
+              intervals, once with the model exactly and once clipped to 1 to 10 like the notebook;{" "}
+              {count(a.bootstrapCoverage.S)} for the percentile bootstrap (B ={" "}
+              {a.bootstrapCoverage.bootstrapB} each), paired with the Wald intervals on the same
+              data sets.
+            </p>
+            <p>
+              <strong>Neither reaches 95%.</strong> Wald intervals covered between{" "}
+              {covRange(waldRates)} of the time; percentile-bootstrap intervals between{" "}
+              {covRange(bootRates)}, consistently better on the same data sets. At n = 200 with
+              groups this close, the log-likelihood is not yet the parabola the Wald interval
+              assumes. Clipping, perhaps surprisingly, changes little.
+            </p>
+          </div>
+          <CoverageSection published={a.coverage} bootstrapCoverage={a.bootstrapCoverage} />
+        </Section>
+
+        <Section id="choosing-k" index={3} title="How many groups do the data support?">
+          <div className="prose-notebook">
+            <p>
+              The notebook assumed two groups. Fitting K = 1 to 4 components (best of{" "}
+              {s.modelChoice.restarts} starts each, variance floor σ ≥ {s.modelChoice.varianceFloor}
+              , <Link href="/methods#dr-003">DR-003</Link>) and scoring each with AIC and BIC gives
+              an uncomfortable answer: <strong>both criteria prefer four components</strong>.
+              {k4 ? (
+                <>
+                  {" "}
+                  The fourth is small and narrow: {fmt(100 * k4.weights[3], 1)}% of the ratings at μ
+                  = {fmt(k4.means[3], 2)} with σ = {fmt(k4.sds[3], 2)}. That is the pile of{" "}
+                  {a.modelChoice.dropped} ratings the notebook&apos;s clipping put at exactly 10.0,
+                  not a third kind of viewer.
+                </>
+              ) : null}
+            </p>
+          </div>
+
+          <ScrollX label="Model comparison for K = 1 to 4" className="sheet p-1">
+            <table className="w-full min-w-[44rem] text-sm">
+              <caption className="sr-only">
+                Log-likelihood, AIC and BIC for one to four components, on all 200 ratings and
+                without the clipped ones
+              </caption>
+              <thead>
+                <tr className="text-left text-xs text-muted-foreground">
+                  <th scope="col" className="px-3 py-2.5 font-normal">
+                    K
+                  </th>
+                  <th scope="col" className="px-2 py-2.5 font-normal">
+                    params
+                  </th>
+                  <th scope="col" className="px-2 py-2.5 font-normal">
+                    ℓ
+                  </th>
+                  <th scope="col" className="px-2 py-2.5 font-normal">
+                    ΔAIC
+                  </th>
+                  <th scope="col" className="px-2 py-2.5 font-normal">
+                    ΔBIC
+                  </th>
+                  <th scope="col" className="px-2 py-2.5 font-normal">
+                    starts at best
+                  </th>
+                  <th scope="col" className="px-2 py-2.5 font-normal">
+                    components (weight at mean)
+                  </th>
+                  <th scope="col" className="px-3 py-2.5 font-normal">
+                    ΔBIC without the {a.modelChoice.dropped} at 10.0
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="num">
+                {full.rows.map((r, i) => (
+                  <tr key={r.K} className="border-t align-top">
+                    <th scope="row" className="px-3 py-2.5 text-left">
+                      {r.K}
+                    </th>
+                    <td className="px-2 py-2.5">{r.p}</td>
+                    <td className="px-2 py-2.5">{fmt(r.ll, 2)}</td>
+                    <td
+                      className={
+                        r.K === full.bestByAic
+                          ? "px-2 py-2.5 font-semibold text-comp-1-ink"
+                          : "px-2 py-2.5"
+                      }
+                    >
+                      {fmt(r.deltaAic, 1)}
+                    </td>
+                    <td
+                      className={
+                        r.K === full.bestByBic
+                          ? "px-2 py-2.5 font-semibold text-comp-1-ink"
+                          : "px-2 py-2.5"
+                      }
+                    >
+                      {fmt(r.deltaBic, 1)}
+                    </td>
+                    <td className="px-2 py-2.5">
+                      {r.reachedBest}/{r.restarts}
+                    </td>
+                    <td className="px-2 py-2.5 font-sans text-xs text-muted-foreground">
+                      {gmmSummary(r)}
+                    </td>
+                    <td
+                      className={
+                        trimmed.rows[i].K === trimmed.bestByBic
+                          ? "px-3 py-2.5 font-semibold text-comp-1-ink"
+                          : "px-3 py-2.5"
+                      }
+                    >
+                      {fmt(trimmed.rows[i].deltaBic, 1)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </ScrollX>
+          <p className="text-xs text-muted-foreground">
+            Δ is the criterion minus the smallest in its column (0 marks the choice). &ldquo;Starts
+            at best&rdquo; counts the starts that ended within 0.01 of the best log-likelihood; for
+            K = 2 and 3 only a few of {s.modelChoice.restarts} found it, which is itself a warning
+            about multimodal likelihoods. Without the clipped ratings BIC picks K ={" "}
+            {trimmed.bestByBic} (AIC still picks {trimmed.bestByAic}).
+          </p>
+
+          <div className="grid gap-5 lg:grid-cols-[1fr_1.15fr]">
+            <div className="prose-notebook">
+              <h3 className="text-xl font-semibold">Is that unusual for the recipe?</h3>
+              <p className="mt-3">
+                The notebook&apos;s data are one draw. Drawing {a.selection.model.options.S} fresh
+                samples of 200 from the same recipe ({a.selection.model.options.restarts} starts per
+                K) shows how the criteria behave in general. BIC almost always picks two components,
+                with or without clipping; AIC overfits, and clipping makes it worse. So K = 4 on the
+                notebook&apos;s sample is a property of this particular draw, not of the recipe.
+              </p>
+            </div>
+            <ScrollX label="How often each criterion picks each K" className="sheet p-1">
+              <table className="w-full min-w-[30rem] text-sm">
+                <caption className="sr-only">
+                  Share of {a.selection.model.options.S} simulated data sets on which BIC and AIC
+                  chose each number of components, with Wilson intervals
+                </caption>
+                <thead>
+                  <tr className="text-left text-xs text-muted-foreground">
+                    <th scope="col" className="px-3 py-2.5 font-normal">
+                      picked K
+                    </th>
+                    <th scope="col" className="px-2 py-2.5 font-normal">
+                      BIC, model
+                    </th>
+                    <th scope="col" className="px-2 py-2.5 font-normal">
+                      BIC, clipped
+                    </th>
+                    <th scope="col" className="px-2 py-2.5 font-normal">
+                      AIC, model
+                    </th>
+                    <th scope="col" className="px-3 py-2.5 font-normal">
+                      AIC, clipped
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="num">
+                  {a.selection.model.bic.map((row, i) => (
+                    <tr key={row.K} className="border-t align-top">
+                      <th scope="row" className="px-3 py-2 text-left">
+                        {row.K}
+                      </th>
+                      {[
+                        a.selection.model.bic[i],
+                        a.selection.clipped.bic[i],
+                        a.selection.model.aic[i],
+                        a.selection.clipped.aic[i],
+                      ].map((c, j) => (
+                        <td key={j} className="px-2 py-2">
+                          {c.picked.successes}
+                          <span className="block text-[0.7rem] text-muted-foreground">
+                            {pctInterval(c.picked, 0)}
+                          </span>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollX>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-2xl font-semibold">
+              One group or two? A bootstrap likelihood-ratio test
+            </h3>
+            <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+              <div className="prose-notebook">
+                <p>
+                  The textbook test compares twice the gain in log-likelihood with a χ² distribution
+                  whose degrees of freedom are the extra parameters, here 5 − 2 = 3. That rests on
+                  Wilks&apos; theorem, which needs the null hypothesis to sit inside the parameter
+                  space with every parameter identified. A single normal is a two-component mixture
+                  with
+                </p>
+                <MathBlock>{String.raw`\begin{aligned} &\pi_2 = 0 \\ &\qquad (\mu_2,\ \sigma_2 \text{ anything}) \\ \text{or}\quad &\mu_1 = \mu_2,\ \sigma_1 = \sigma_2 \\ &\qquad (\pi_1 \text{ anything}) \end{aligned}`}</MathBlock>
+                <p>
+                  so the null lies on the edge of the space (π₂ cannot go below 0) and some
+                  parameters vanish from the model there. Wilks&apos; theorem does not apply. The
+                  parametric bootstrap side-steps it: fit one normal, simulate{" "}
+                  {count(lrt.options.B)} data sets from it, run the same two-component fit (
+                  {lrt.options.restarts} starts) on each, and use those statistics as the null
+                  distribution.
+                </p>
+              </div>
+              <div className="sheet space-y-3 p-4 sm:p-5">
+                <LrtPlot
+                  histogram={lrt.nullHistogram}
+                  total={lrt.nullStatistics.length}
+                  df={lrt.df}
+                  null95={lrt.null95}
+                  chi95={lrt.chiSquare95}
+                  observed={lrt.statistic}
+                />
+                <ul className="grid gap-x-5 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">
+                  <li className="flex items-center gap-1.5">
+                    <span className="inline-block h-3 w-4 rounded-sm bg-comp-1/35" aria-hidden />
+                    bootstrap null ({count(lrt.options.B)} data sets)
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <svg viewBox="0 0 16 8" className="h-2 w-4" aria-hidden>
+                      <path
+                        d="M0,4H16"
+                        stroke="var(--comp-2)"
+                        strokeWidth="2"
+                        strokeDasharray="4 2"
+                      />
+                    </svg>
+                    χ² density with {lrt.df} df
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <span className="inline-block h-3 w-0.5 bg-comp-1-ink" aria-hidden />
+                    bootstrap 95% point: <span className="num">{fmt(lrt.null95)}</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <span className="inline-block h-3 w-0.5 bg-comp-2-ink" aria-hidden />
+                    χ² 95% point: <span className="num">{fmt(lrt.chiSquare95)}</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <span className="inline-block h-3 w-0.5 bg-foreground" aria-hidden />
+                    observed: <span className="num">{fmt(lrt.statistic)}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="sheet p-4">
+                <dt className="text-sm text-muted-foreground">observed 2(ℓ₂ − ℓ₁)</dt>
+                <dd className="num mt-1 text-2xl font-medium">{fmt(lrt.statistic, 2)}</dd>
+                <dd className="mt-1 text-xs text-muted-foreground">
+                  ℓ₁ = {fmt(lrt.ll1, 2)}, ℓ₂ = {fmt(lrt.ll2, 2)}
+                </dd>
+              </div>
+              <div className="sheet p-4">
+                <dt className="text-sm text-muted-foreground">bootstrap p-value</dt>
+                <dd className="num mt-1 text-2xl font-medium">{fmt(lrt.pValue, 3)}</dd>
+                <dd className="mt-1 text-xs text-muted-foreground">
+                  (1 + {lrt.exceed}) / ({count(lrt.options.B)} + 1): no null statistic was as large,
+                  and p cannot be smaller with B = {count(lrt.options.B)}
+                </dd>
+              </div>
+              <div className="sheet p-4">
+                <dt className="text-sm text-muted-foreground">χ²₃ p-value (not valid here)</dt>
+                <dd className="num mt-1 text-2xl font-medium">{sci(lrt.chiSquarePValue, 1)}</dd>
+                <dd className="mt-1 text-xs text-muted-foreground">
+                  tiny here too, but only because the effect is large: the reference is wrong
+                </dd>
+              </div>
+              <div className="sheet p-4">
+                <dt className="text-sm text-muted-foreground">
+                  χ²₃ test&apos;s real false-alarm rate
+                </dt>
+                <dd className="num mt-1 text-2xl font-medium">{pct(naive.estimate, 0)}</dd>
+                <dd className="mt-1 text-xs text-muted-foreground">
+                  {lrt.naiveRejections} of {count(lrt.options.B)} null data sets exceed{" "}
+                  {fmt(lrt.chiSquare95)} (Wilson {pctInterval(naive, 1)}), not 5%
+                </dd>
+              </div>
+            </dl>
+            <p className="text-sm text-muted-foreground">
+              The bootstrap&apos;s 95% point is {fmt(lrt.null95)} against χ²₃&apos;s{" "}
+              {fmt(lrt.chiSquare95)}. The variance floor bound in {lrt.floorBinding} of the{" "}
+              {count(lrt.options.B)} null fits; leaving those out moves the 95% point to{" "}
+              {fmt(lrt.null95Unfloored)}, so the gap is not an artefact of the floor (
+              <Link className="link" href="/methods#dr-003">
+                DR-003
+              </Link>
+              ).
+              {other && other.logLikelihood > lrt.ll2 + 0.01
+                ? ` The ${lrt.options.restarts} starts on the observed data found ℓ₂ = ${fmt(lrt.ll2, 2)}, not the higher maximum at ${fmt(other.logLikelihood, 2)}, so the observed statistic, if anything, understates the evidence.`
+                : null}
+            </p>
+          </div>
+        </Section>
+
+        <Section id="convergence" index={4} title="Does EM's answer depend on where it starts?">
+          <div className="prose-notebook">
+            <p>
+              {count(a.convergence.runs.length)} notebook-style random starts (μ ~ U(3, 8), σ ~
+              U(0.5, 2), π = 0.5) on the notebook&apos;s 200 ratings, each run until |Δℓ| &lt; 10⁻¹²
+              with its whole log-likelihood trace kept. The ascent property holds in every run. The
+              answer does depend on the start: most runs reach the maximum the notebook was heading
+              for, and a few find the narrow-component maximum with a higher likelihood. &ldquo;Keep
+              the best of many starts&rdquo; maximises the likelihood; here that means more starts
+              make the implausible answer more likely, not less.
+            </p>
+          </div>
+          <ConvergenceSection published={a.convergence} notebookIterations={toTol} />
+
+          <div className="sheet grid gap-5 p-4 sm:p-6 lg:grid-cols-[1fr_1.1fr]">
+            <div>
+              <h3 className="text-xl font-semibold">
+                Random start or k-means++? A paired comparison
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                The same {count(ic.options.S)} simulated data sets (the notebook&apos;s recipe,
+                clipped), each fitted once from the notebook&apos;s random start and once from
+                k-means++ (tolerance {ic.options.tolerance.toExponential(0).replace("e-", "e−")}).
+                Pairing by data set removes the variation between data sets from the comparison.
+              </p>
+            </div>
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border p-3">
+                <dt className="text-xs text-muted-foreground">
+                  extra iterations for the random start
+                </dt>
+                <dd className="num mt-1 text-2xl font-medium">
+                  {fmt(ic.iterations.difference.estimate, 1)}
+                </dd>
+                <dd className="mt-1 text-xs text-muted-foreground">
+                  mean paired difference, 95% CI {fmt(ic.iterations.difference.interval.lower, 1)}{" "}
+                  to {fmt(ic.iterations.difference.interval.upper, 1)} (bootstrap over data sets);
+                  medians {ic.iterations.random.median} vs {ic.iterations.kmeans.median}
+                </dd>
+              </div>
+              <div className="rounded-xl border p-3">
+                <dt className="text-xs text-muted-foreground">k-means++ was faster</dt>
+                <dd className="num mt-1 text-2xl font-medium">
+                  {ic.iterations.difference.aHigher}/{ic.iterations.difference.n}
+                </dd>
+                <dd className="mt-1 text-xs text-muted-foreground">
+                  data sets ({pctInterval(faster, 0)}); {ic.iterations.difference.ties} ties
+                </dd>
+              </div>
+              <div className="rounded-xl border p-3 sm:col-span-2">
+                <dt className="text-xs text-muted-foreground">reached the best-known maximum</dt>
+                <dd className="num mt-1 text-lg font-medium">
+                  random {ic.reachedBest.random.successes}/{ic.reachedBest.random.n} · k-means++{" "}
+                  {ic.reachedBest.kmeans.successes}/{ic.reachedBest.kmeans.n}
+                </dd>
+                <dd className="mt-1 text-xs text-muted-foreground">
+                  Wilson 95% CI for each: {pctInterval(ic.reachedBest.random, 1)} and{" "}
+                  {pctInterval(ic.reachedBest.kmeans, 1)}. On these data sets the starts differ in
+                  speed, not in where they end up.
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </Section>
+
+        <Callout title="Where these numbers come from">
+          Every number on this page is computed by{" "}
+          <a className="link" href={repoFile("web/scripts/generate-inference.ts")}>
+            generate-inference.ts
+          </a>{" "}
+          (<span className="num">pnpm inference</span>, about two minutes) with the seeds and sizes
+          in{" "}
+          <a className="link" href={repoFile("web/src/lib/inference/settings.ts")}>
+            settings.ts
+          </a>
+          , and a test re-runs it on every push (
+          <Link className="link" href="/methods#dr-004">
+            DR-004
+          </Link>
+          ). The statistics helpers are checked against SciPy and R. Simulated data use this
+          site&apos;s generator, not NumPy&apos;s (
+          <Link className="link" href="/methods#dr-001">
+            DR-001
+          </Link>
+          ). Methods, assumptions and limitations are on the{" "}
+          <Link className="link" href="/methods">
+            methods page
+          </Link>
+          .
+        </Callout>
+      </div>
+    </>
+  );
+}

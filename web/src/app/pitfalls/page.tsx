@@ -13,10 +13,12 @@ import { CollapseDemo } from "@/components/pitfalls/collapse-demo";
 import { RestartGallery } from "@/components/pitfalls/restart-gallery";
 import { SwitchCensus } from "@/components/pitfalls/switch-census";
 import { fit } from "@/lib/em/em";
-import { accuracyMatched, matchByMean } from "@/lib/em/labels";
+import { accuracyMatched, correctMatched, matchByMean } from "@/lib/em/labels";
 import { NOTEBOOK_GROUP_NAMES, notebookFinal, notebookRun } from "@/lib/em/notebook-run";
 import type { MixtureParams } from "@/lib/em/types";
-import { minus, pyPercent } from "@/lib/format";
+import { minus, pyPercent, signed } from "@/lib/format";
+import { wilsonInterval } from "@/lib/stats/intervals";
+import { pairedMeanDifference } from "@/lib/stats/paired";
 
 export const metadata: Metadata = {
   title: "Pitfalls: where EM quietly goes wrong",
@@ -68,6 +70,14 @@ export default function PitfallsPage() {
   const longMatching = matchByMean(longFinal, run.trueParams);
   const longAcc = accuracyMatched(long.finalGamma1, run.trueGroups, longMatching);
   const lls = long.iterations.map((it) => it.logLikelihood);
+  // the same 200 users classified by both fits: a paired comparison
+  const accLong = wilsonInterval(Math.round(longAcc * run.n), run.n);
+  const acc15 = wilsonInterval(Math.round(run.summary.accuracyMatched * run.n), run.n);
+  const drop = pairedMeanDifference(
+    correctMatched(long.finalGamma1, run.trueGroups, longMatching),
+    correctMatched(run.finalGamma1, run.trueGroups, matchByMean(final, run.trueParams)),
+    { seed: 15, B: 4000 },
+  );
   const seed0 = run.otherSeeds.find((s) => s.seed === 0);
 
   const stopRows = [
@@ -211,7 +221,16 @@ export default function PitfallsPage() {
                 Continue from the same start and EM needs {long.iterations.length} iterations to
                 meet its own stopping rule. It ends somewhere noticeably different, with a higher
                 likelihood ({minus(lls.at(-1)!.toFixed(2))}) but a <em>lower</em> classification
-                accuracy ({pyPercent(longAcc)} against {pyPercent(run.summary.accuracyMatched)}).
+                accuracy: {pyPercent(longAcc)} (Wilson 95% CI {pyPercent(accLong.lower)} to{" "}
+                {pyPercent(accLong.upper)}) against {pyPercent(run.summary.accuracyMatched)} (
+                {pyPercent(acc15.lower)} to {pyPercent(acc15.upper)}).
+              </p>
+              <p>
+                Both fits classify the same 200 users, so the fair comparison is paired: a change of{" "}
+                {signed(100 * drop.estimate, 1)} percentage points (paired bootstrap 95% CI{" "}
+                {signed(100 * drop.interval.lower, 1)} to {signed(100 * drop.interval.upper, 1)}).{" "}
+                {drop.aLower} users went from right to wrong and {drop.aHigher} from wrong to right;
+                the other {drop.ties} were classified the same way by both.
               </p>
               <p>
                 That is not a bug. EM maximises the likelihood of the data it is given, and these
@@ -371,7 +390,11 @@ export default function PitfallsPage() {
               notebook&apos;s run was heading for (<Ell /> = −415.37). Now and then one finds a
               different peak with an even higher likelihood (<Ell /> ≈ −413.99): a narrow component
               sitting on a cluster of high ratings. Switch the data and draw new starts a few times
-              to catch one.
+              to catch one, or see on the{" "}
+              <Link className="link" href="/inference#convergence">
+                inference page
+              </Link>{" "}
+              how often it happens and what it means for &ldquo;keep the best of many starts&rdquo;.
             </p>
           </div>
           <RestartGallery />

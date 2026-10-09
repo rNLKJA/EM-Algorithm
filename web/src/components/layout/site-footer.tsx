@@ -62,6 +62,11 @@ export function SiteFooter() {
               </a>
             </li>
             <li>
+              <Link className="hover:underline" href="/ai-log">
+                AI audit log (this browser)
+              </Link>
+            </li>
+            <li>
               <a className="hover:underline" href={repoFile("LICENSE")}>
                 MIT licence
               </a>

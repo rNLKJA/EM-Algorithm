@@ -6,8 +6,14 @@ import { Button } from "@/components/ui/button";
 import { useEmWorker } from "@/hooks/use-em-worker";
 import { notebookRun } from "@/lib/em/notebook-run";
 import type { RestartSummary } from "@/lib/em/restarts";
+import { wilsonInterval } from "@/lib/stats/intervals";
 
 const COUNT = 100;
+
+function ci(k: number) {
+  const w = wilsonInterval(k, COUNT);
+  return `${Math.round(100 * w.lower)}% to ${Math.round(100 * w.upper)}%`;
+}
 
 /** How often does the notebook's own recipe end with component 1 as the low-mean group? */
 export function SwitchCensus() {
@@ -85,7 +91,8 @@ export function SwitchCensus() {
             <p className="mt-3 text-sm">
               <span className="num text-lg font-medium">{switched}</span> of {COUNT} runs ended with
               component 1 as the <em>low</em>-mean group (coral), so their &ldquo;sci-fi&rdquo;
-              label would point at romance lovers. The other{" "}
+              label would point at romance lovers (Wilson 95% CI{" "}
+              <span className="num">{ci(switched)}</span>). The other{" "}
               <span className="num">{COUNT - switched}</span> (teal) happen to line up. It is close
               to a coin toss, and mostly decided by which mean the random start happens to put
               lower: that alone predicts the outcome in <span className="num">{predicted}</span> of{" "}
