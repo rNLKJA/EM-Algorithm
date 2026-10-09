@@ -204,6 +204,10 @@ describe("stats and formatting", () => {
     expect(sci(4.2376e-27)).toBe("4.24 × 10⁻²⁷");
     expect(smart(0.00001234)).toBe("1.23 × 10⁻⁵");
     expect(smart(0.4839414)).toBe("0.4839");
+    // a run still moving by 10⁻⁶ per step must not read "0.0000" (playground status line)
+    expect(smart(0.0293, 4)).toBe("0.0293");
+    expect(smart(1.3e-6, 4)).toBe("1.30 × 10⁻⁶");
+    expect(sci(5.7e-14, 1)).toBe("5.7 × 10⁻¹⁴");
     expect(signed(8.9845)).toBe("+8.98");
     expect(signed(-0.5)).toBe("−0.50");
     // the UI spells non-finite values like JavaScript; only pyFixed uses Python's "nan"

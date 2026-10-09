@@ -1,0 +1,31 @@
+WEBVTT
+
+NOTE Fit the mixture to 200 ratings: captions match the on-screen steps.
+
+1
+00:00:00.200 --> 00:00:06.626
+Step 1 of 7. The notebook's 200 synthetic ratings and its own random start, capped at 15 iterations.
+
+2
+00:00:06.626 --> 00:00:19.770
+Step 2 of 7. Press play: the log-likelihood climbs from −425.50 and the responsibilities settle.
+
+3
+00:00:19.770 --> 00:00:25.989
+Step 3 of 7. Stopped at the cap of 15 with ℓ = −416.51, still rising by 0.0293 per step: not converged.
+
+4
+00:00:25.989 --> 00:00:41.440
+Step 4 of 7. Raise the cap: from the same start EM converges after 90 iterations, at ℓ = −415.37.
+
+5
+00:00:41.440 --> 00:00:58.012
+Step 5 of 7. Now a bad start: drag μ₁ into the middle of the data and narrow σ₁ to 0.2.
+
+6
+00:00:58.012 --> 00:01:12.853
+Step 6 of 7. EM converges again, to a local maximum: ℓ = −423.63, a spike on 2.4% of the ratings at 6.48.
+
+7
+00:01:12.853 --> 00:01:19.454
+Step 7 of 7. The log-likelihood never decreased, yet this peak is 8.3 lower: EM cannot see the better one.

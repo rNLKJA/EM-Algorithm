@@ -10,16 +10,16 @@ import { nav } from "@/lib/site";
 export function SiteNav() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
+    <nav aria-label="Main" className="hidden items-center gap-0.5 lg:flex">
       {nav.map((item) => {
-        const active = pathname === item.href;
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+              "relative rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
               active && "text-foreground",
             )}
           >
@@ -27,7 +27,7 @@ export function SiteNav() {
             {active && (
               <span
                 aria-hidden
-                className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-comp-1"
+                className="absolute inset-x-2.5 -bottom-0.5 h-0.5 rounded-full bg-comp-1"
               />
             )}
           </Link>
@@ -66,7 +66,7 @@ export function MobileNav() {
   }, [open]);
 
   return (
-    <div ref={rootRef} className="md:hidden">
+    <div ref={rootRef} className="lg:hidden">
       <button
         ref={buttonRef}
         type="button"

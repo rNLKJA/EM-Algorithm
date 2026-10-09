@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LogoMark } from "./logo-mark";
-import { nav, repoFile, site } from "@/lib/site";
+import { nav, repoFile, repoTree, site } from "@/lib/site";
 
 export function SiteFooter() {
   return (
@@ -14,7 +14,7 @@ export function SiteFooter() {
           <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
             A personal project by {site.author}. The explainer and notebook were written in 2025;
             this site was built around them in 2026. The originals are preserved unchanged in{" "}
-            <a className="link" href={`${site.repo}/tree/main/original`}>
+            <a className="link" href={repoTree("original")}>
               original/
             </a>
             , and every number shown here comes from re-running that notebook or from a TypeScript
@@ -60,6 +60,11 @@ export function SiteFooter() {
               <a className="hover:underline" href={repoFile("scripts/export_parity.py")}>
                 Parity export script
               </a>
+            </li>
+            <li>
+              <Link className="hover:underline" href="/ai-log">
+                AI audit log (this browser)
+              </Link>
             </li>
             <li>
               <a className="hover:underline" href={repoFile("LICENSE")}>

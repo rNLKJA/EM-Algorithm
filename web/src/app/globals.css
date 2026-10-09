@@ -283,3 +283,55 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* markdown documents (decision records, model card) rendered on /methods */
+@layer components {
+  .prose-doc {
+    @apply max-w-[72ch] text-[0.98rem] leading-relaxed text-foreground/90;
+  }
+  .prose-doc > * + * {
+    @apply mt-3.5;
+  }
+  .prose-doc .doc-h {
+    @apply mt-7 font-heading text-xl font-semibold text-foreground;
+  }
+  .prose-doc .doc-sub {
+    @apply mt-5 font-heading text-lg font-semibold text-foreground;
+  }
+  .prose-doc ul {
+    @apply list-disc space-y-1.5 pl-5;
+  }
+  .prose-doc ol {
+    @apply list-decimal space-y-1.5 pl-5;
+  }
+  .prose-doc li > p + p {
+    @apply mt-1.5;
+  }
+  .prose-doc a {
+    @apply underline decoration-comp-1/50 underline-offset-[3px] hover:decoration-comp-1;
+  }
+  .prose-doc strong {
+    @apply font-semibold text-foreground;
+  }
+  .prose-doc code {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-[0.85em];
+  }
+  .prose-doc pre {
+    @apply overflow-x-auto rounded-lg bg-muted p-3 text-sm;
+  }
+  .prose-doc pre code {
+    @apply bg-transparent p-0;
+  }
+  .prose-doc .doc-table {
+    @apply rounded-xl border;
+  }
+  .prose-doc table {
+    @apply w-full text-sm;
+  }
+  .prose-doc th {
+    @apply px-3 py-2 text-left text-xs font-normal text-muted-foreground;
+  }
+  .prose-doc td {
+    @apply border-t px-3 py-2 align-top;
+  }
+}

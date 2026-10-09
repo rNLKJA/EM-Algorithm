@@ -1,5 +1,14 @@
+import {
+  ArrowRight,
+  BookOpenText,
+  ChartNoAxesCombined,
+  CirclePlay,
+  FlaskConical,
+  Footprints,
+  NotebookPen,
+  TriangleAlert,
+} from "lucide-react";
 import type { Metadata } from "next";
-import { ArrowRight, BookOpenText, FlaskConical, Footprints, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { StaticMixture } from "@/components/charts/static-mixture";
 import { ComponentSwatch } from "@/components/common/legend";
@@ -10,7 +19,8 @@ import { Button } from "@/components/ui/button";
 import { alignParams, matchByMean } from "@/lib/em/labels";
 import { NOTEBOOK_GROUP_NAMES, notebookFinal, notebookRun } from "@/lib/em/notebook-run";
 import { minus, pyPercent, signed } from "@/lib/format";
-import { pageMetadata, repoFile, site } from "@/lib/site";
+import { pageMetadata, repoFile, repoTree, site } from "@/lib/site";
+import { wilsonInterval } from "@/lib/stats/intervals";
 
 export const metadata: Metadata = pageMetadata({ description: site.description, path: "/" });
 
@@ -34,10 +44,22 @@ const ENTRY_POINTS = [
     text: "Label switching, stopping too early, local maxima and variance collapse: four ways a run can look fine and still be wrong.",
   },
   {
+    href: "/inference",
+    icon: ChartNoAxesCombined,
+    title: "Inference",
+    text: "Standard errors and bootstrap intervals, whether those intervals really cover 95%, how many groups the data support, and how much the answer depends on the start.",
+  },
+  {
     href: "/maths",
     icon: BookOpenText,
     title: "Maths",
     text: "Bayes' theorem for the E-step, calculus for the M-step, a Normal + Beta mixture and why the likelihood never goes down.",
+  },
+  {
+    href: "/methods",
+    icon: NotebookPen,
+    title: "Methods",
+    text: "Data provenance, assumptions and limitations, the decision records, a model card for the fitted mixture and the AI use statement.",
   },
 ];
 
@@ -45,6 +67,7 @@ export default function Home() {
   const run = notebookRun;
   const s = run.summary;
   const matching = matchByMean(notebookFinal, run.trueParams);
+  const acc = wilsonInterval(Math.round(s.accuracyAsWritten * run.n), run.n);
   const aligned = alignParams(notebookFinal, matching);
 
   return (
@@ -85,7 +108,16 @@ export default function Home() {
                 <Link href="/playground">Open the playground</Link>
               </Button>
             </div>
-            <p className="mt-6 text-sm text-muted-foreground">
+            <p className="mt-5 text-sm">
+              <Link href="/tour" className="group inline-flex items-center gap-2">
+                <CirclePlay className="size-4 text-comp-1-ink" aria-hidden />
+                <span className="font-medium underline decoration-comp-1/50 underline-offset-[3px] transition-colors group-hover:decoration-comp-1">
+                  Watch the guided tour
+                </span>
+                <span className="text-muted-foreground">· three short walkthroughs</span>
+              </Link>
+            </p>
+            <p className="mt-4 text-sm text-muted-foreground">
               A personal project by {site.author} · written 2025, revived 2026
             </p>
           </div>
@@ -195,7 +227,8 @@ export default function Home() {
                 <dt className="text-sm text-muted-foreground">classified correctly</dt>
                 <dd className="num mt-1 text-3xl font-medium">{pyPercent(s.accuracyAsWritten)}</dd>
                 <dd className="mt-1 text-xs text-muted-foreground">
-                  of the 200 users, using γ &gt; 0.5
+                  of the 200 users the model was fitted to (in-sample), using γ &gt; 0.5; 95% CI{" "}
+                  {pyPercent(acc.lower)} to {pyPercent(acc.upper)} (Wilson)
                 </dd>
               </div>
               <div className="sheet p-4">
@@ -284,11 +317,11 @@ export default function Home() {
 
       {/* entry points */}
       <section aria-labelledby="explore" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <p className="eyebrow">Four ways in</p>
+        <p className="eyebrow">Six ways in</p>
         <h2 id="explore" className="mt-3 text-3xl font-semibold sm:text-4xl">
           Read it, run it, break it
         </h2>
-        <ul className="mt-10 grid gap-5 sm:grid-cols-2">
+        <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {ENTRY_POINTS.map((e, i) => (
             <li key={e.href}>
               <Link
@@ -427,7 +460,7 @@ export default function Home() {
             <h3 className="text-lg font-semibold">Provenance</h3>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               The explainer and notebook are kept unchanged in{" "}
-              <a className="link" href={`${site.repo}/tree/main/original`}>
+              <a className="link" href={repoTree("original")}>
                 original/
               </a>
               . A script,{" "}
@@ -438,7 +471,12 @@ export default function Home() {
               against the saved output, and exports the ratings, the random start and the
               per-iteration trace. The TypeScript port of <span className="num">EMAnalyzer</span> is
               tested against that trace to 10⁻⁶, and regenerates the notebook&apos;s console output
-              character for character. Nothing here needs a server, an account or a key.
+              character for character. Nothing here needs a server or an account; the one optional
+              AI feature runs in your browser with your own key, and{" "}
+              <Link className="link" href="/methods">
+                the methods page
+              </Link>{" "}
+              says what it does.
             </p>
           </div>
         </div>

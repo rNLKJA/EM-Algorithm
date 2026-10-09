@@ -1,0 +1,35 @@
+WEBVTT
+
+NOTE How sure are we? Intervals and the number of groups: captions match the on-screen steps.
+
+1
+00:00:00.200 --> 00:00:07.817
+Step 1 of 8. The notebook printed point estimates; this page asks how sure, how many and how stable.
+
+2
+00:00:07.817 --> 00:00:16.097
+Step 2 of 8. The notebook's run finished from its own start (170 iterations), with Hessian standard errors.
+
+3
+00:00:16.097 --> 00:00:20.196
+Step 3 of 8. Parametric bootstrap, B = 1,000 at seed 42: π₁ = 0.221, 95% CI 0.110 to 0.359.
+
+4
+00:00:20.196 --> 00:00:31.115
+Step 4 of 8. Re-run the bootstrap in this browser with seed 42: 1,000 refits in a Web Worker.
+
+5
+00:00:31.115 --> 00:00:35.698
+Step 5 of 8. Same seed, same numbers: the browser reproduced the published intervals.
+
+6
+00:00:35.698 --> 00:00:44.582
+Step 6 of 8. How many groups? BIC picks K = 3 and AIC K = 4; the third is the pile of ratings clipped to 10.0.
+
+7
+00:00:44.582 --> 00:00:50.697
+Step 7 of 8. Without the 7 clipped ratings BIC picks K = 2, as it does on 91 of 100 fresh samples.
+
+8
+00:00:50.697 --> 00:01:00.960
+Step 8 of 8. One group or two? Bootstrap LRT p = 0.002; the χ²₃ test would falsely reject 16% of the time.

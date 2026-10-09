@@ -12,8 +12,15 @@ import { finalResultsConsole, fitConsole } from "@/lib/em/notebook-console";
 import { notebookRun } from "@/lib/em/notebook-run";
 import { PARAM_KEYS, type FitResult, type MixtureParams } from "@/lib/em/types";
 import { pyPercent, sci, smart } from "@/lib/format";
+import { wilsonInterval } from "@/lib/stats/intervals";
 import { cn } from "@/lib/utils";
 import type { Dataset } from "./use-playground";
+
+/** Wilson 95% interval for an accuracy measured on n ratings. */
+function wilsonText(accuracy: number, n: number) {
+  const w = wilsonInterval(Math.round(accuracy * n), n);
+  return `${pyPercent(w.lower)} to ${pyPercent(w.upper)}`;
+}
 
 export function Results({
   result,
@@ -145,6 +152,11 @@ export function Results({
               <dd className="num mt-1 text-2xl font-medium">
                 {usable ? pyPercent(accMatched) : "n/a"}
               </dd>
+              {usable && (
+                <dd className="num mt-1 text-[0.72rem] text-muted-foreground">
+                  95% CI {wilsonText(accMatched, gamma1.length)}
+                </dd>
+              )}
             </div>
             <div className="rounded-xl border p-3">
               <dt className="text-xs text-muted-foreground">as the notebook computes it</dt>
@@ -156,6 +168,11 @@ export function Results({
               >
                 {usable ? pyPercent(accWritten) : "n/a"}
               </dd>
+              {usable && (
+                <dd className="num mt-1 text-[0.72rem] text-muted-foreground">
+                  95% CI {wilsonText(accWritten, gamma1.length)}
+                </dd>
+              )}
             </div>
           </dl>
           {!usable ? (
@@ -185,7 +202,10 @@ export function Results({
                 ? " Here they have not, which is why the two disagree."
                 : " Here they agree."}{" "}
               Responsibilities are taken from the E-step of iteration {Math.max(1, stage)}, like the
-              notebook&apos;s <span className="num">em.gamma1</span>.
+              notebook&apos;s <span className="num">em.gamma1</span>. The intervals are Wilson 95%
+              intervals over the {gamma1.length} ratings. This is in-sample accuracy: the same
+              ratings fitted the model, so an interval reflects which users happened to be drawn
+              given the fitted rule, not the uncertainty of the fit itself.
             </p>
           )}
         </section>
@@ -237,7 +257,7 @@ export function Results({
                   <td className="py-1 pr-3">{it.iteration}</td>
                   <td className="py-1 pr-3">{it.logLikelihood.toFixed(4)}</td>
                   <td className="py-1 pr-3">
-                    {it.improvement === null ? "" : it.improvement.toFixed(5)}
+                    {it.improvement === null ? "" : smart(it.improvement, 5)}
                   </td>
                   {(["pi1", "mu1", "mu2", "sigma1", "sigma2"] as const).map((k) => (
                     <td key={k} className="py-1 pr-3">

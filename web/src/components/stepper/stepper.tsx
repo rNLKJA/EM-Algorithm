@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ExplainIteration } from "@/components/ai/explain-iteration";
 import { LineChart } from "@/components/charts/line-chart";
 import { MixtureChart } from "@/components/charts/mixture-chart";
 import { CorrectionTag } from "@/components/common/callout";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { usePlayback } from "@/hooks/use-playback";
 import { useTweenedParams } from "@/hooks/use-tweened-params";
+import { degenerateStatus, type IterationInput } from "@/lib/ai/explain-iteration";
 import { diagnoseStep } from "@/lib/em/diagnose";
 import { normalPdf } from "@/lib/em/gaussian";
 import {
@@ -27,6 +29,8 @@ import { signed, smart } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const DATA = [...README_RATINGS];
+const MAX_ITERATIONS = 15;
+const TOLERANCE = 1e-6;
 type PresetId = (typeof STEPPER_PRESETS)[number]["id"] | "custom";
 
 export interface StepperFormulas {
@@ -72,7 +76,7 @@ export function Stepper({ formulas }: { formulas: StepperFormulas }) {
 
   const init = preset === "custom" ? custom : STEPPER_PRESETS.find((p) => p.id === preset)!.init;
   const stages = useMemo(
-    () => buildStages(DATA, init, 15, 1e-6, preset === "readme" ? 2 : 1),
+    () => buildStages(DATA, init, MAX_ITERATIONS, TOLERANCE, preset === "readme" ? 2 : 1),
     [init, preset],
   );
   const playback = usePlayback(stages.length, 1500);
@@ -137,6 +141,11 @@ export function Stepper({ formulas }: { formulas: StepperFormulas }) {
   }, [next, prev]);
 
   const gammaForChart = stage.kind === "init" ? undefined : stage.e.gamma1;
+  const explainInput = useMemo(
+    () => iterationInput(stages, playback.index),
+    [stages, playback.index],
+  );
+  const explainContext = `${preset}:${preset === "custom" ? JSON.stringify(custom) : ""}:${stage.kind === "init" ? 0 : stage.iteration}`;
   const chartParams = stage.kind === "e" ? stage.params : tweened;
 
   return (
@@ -298,52 +307,54 @@ export function Stepper({ formulas }: { formulas: StepperFormulas }) {
         </p>
       </section>
 
-      <section
-        aria-label="Current stage"
-        className="sheet min-w-0 p-4 sm:p-6 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start"
-      >
-        <p className="eyebrow">
-          {stage.kind === "init" ? "start" : stage.kind === "e" ? "expectation" : "maximisation"}
-        </p>
-        <h2 className="mt-2 text-xl leading-snug font-semibold sm:text-2xl">{stageTitle(stage)}</h2>
-        {isReadme && (
-          <div className="mt-4 flex items-center gap-2.5">
-            <Switch id="show-written" checked={showWritten} onCheckedChange={setShowWritten} />
-            <label htmlFor="show-written" className="text-sm">
-              Show the explainer&apos;s hand-worked numbers beside the exact ones
-            </label>
-          </div>
-        )}
-        <div className="mt-5">
-          {stage.kind === "init" && <InitPanel params={stage.params} />}
-          {stage.kind === "e" && (
-            <EPanel
-              stage={stage}
-              formula={formulas.eStep}
-              written={isReadme && showWritten && stage.iteration === 1}
-              repeat={isReadme && showWritten && stage.iteration === 2}
-            />
-          )}
-          {stage.kind === "m" && (
-            <MPanel
-              stage={stage}
-              formula={formulas.mStep}
-              written={isReadme && showWritten && stage.iteration === 1}
-            />
-          )}
-          {isReadme && playback.atEnd && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-3 text-sm">
-              <p className="min-w-0 flex-1 leading-relaxed">
-                Nothing moved because the explainer&apos;s guess is already the answer. Try the
-                muddled guess to watch EM pull the two groups apart.
-              </p>
-              <Button variant="outline" size="sm" onClick={() => choosePreset("overlap")}>
-                Try Muddled
-              </Button>
+      <div className="min-w-0 space-y-6 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start">
+        <section aria-label="Current stage" className="sheet min-w-0 p-4 sm:p-6">
+          <p className="eyebrow">
+            {stage.kind === "init" ? "start" : stage.kind === "e" ? "expectation" : "maximisation"}
+          </p>
+          <h2 className="mt-2 text-xl leading-snug font-semibold sm:text-2xl">
+            {stageTitle(stage)}
+          </h2>
+          {isReadme && (
+            <div className="mt-4 flex items-center gap-2.5">
+              <Switch id="show-written" checked={showWritten} onCheckedChange={setShowWritten} />
+              <label htmlFor="show-written" className="text-sm">
+                Show the explainer&apos;s hand-worked numbers beside the exact ones
+              </label>
             </div>
           )}
-        </div>
-      </section>
+          <div className="mt-5">
+            {stage.kind === "init" && <InitPanel params={stage.params} />}
+            {stage.kind === "e" && (
+              <EPanel
+                stage={stage}
+                formula={formulas.eStep}
+                written={isReadme && showWritten && stage.iteration === 1}
+                repeat={isReadme && showWritten && stage.iteration === 2}
+              />
+            )}
+            {stage.kind === "m" && (
+              <MPanel
+                stage={stage}
+                formula={formulas.mStep}
+                written={isReadme && showWritten && stage.iteration === 1}
+              />
+            )}
+            {isReadme && playback.atEnd && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-3 text-sm">
+                <p className="min-w-0 flex-1 leading-relaxed">
+                  Nothing moved because the explainer&apos;s guess is already the answer. Try the
+                  muddled guess to watch EM pull the two groups apart.
+                </p>
+                <Button variant="outline" size="sm" onClick={() => choosePreset("overlap")}>
+                  Try Muddled
+                </Button>
+              </div>
+            )}
+          </div>
+        </section>
+        <ExplainIteration input={explainInput} context={explainContext} />
+      </div>
       <section
         aria-label="Log-likelihood"
         className="sheet p-4 sm:p-5 lg:col-start-1 lg:row-start-3 lg:self-start"
@@ -366,6 +377,35 @@ export function Stepper({ formulas }: { formulas: StepperFormulas }) {
       </section>
     </div>
   );
+}
+
+/** The numbers of the iteration on screen, for "Explain this iteration" (null at the start). */
+function iterationInput(stages: StepperStage[], index: number): IterationInput | null {
+  const stage = stages[index];
+  if (stage.kind === "init") return null;
+  const m = stage.kind === "m" ? stage : stages[index + 1];
+  if (!m || m.kind !== "m") return null;
+  const last = m.index === stages.length - 1;
+  const status = !Number.isFinite(m.logLikelihood)
+    ? degenerateStatus(diagnoseStep(DATA, m.before, m.params))
+    : !last
+      ? "continuing"
+      : Math.abs(m.improvement) < TOLERANCE
+        ? "converged"
+        : "stopped-at-cap";
+  return {
+    source: "stepper",
+    dataset: "The explainer's four hand-worked ratings, [2, 3, 7, 8]",
+    data: DATA,
+    iteration: m.iteration,
+    stage: stage.kind,
+    before: m.before,
+    after: m.params,
+    e: m.e,
+    logLikelihoodBefore: m.logLikelihood - m.improvement,
+    logLikelihoodAfter: m.logLikelihood,
+    stopping: { tolerance: TOLERANCE, maxIterations: MAX_ITERATIONS, status },
+  };
 }
 
 function InitPanel({ params }: { params: MixtureParams }) {

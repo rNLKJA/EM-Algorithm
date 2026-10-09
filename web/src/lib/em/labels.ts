@@ -76,11 +76,21 @@ export function accuracyMatched(
   trueGroups: ArrayLike<number>,
   matching: Matching,
 ): number {
-  let hits = 0;
+  const correct = correctMatched(gamma1, trueGroups, matching);
+  return correct.reduce((a, b) => a + b, 0) / gamma1.length;
+}
+
+/** Per user: 1 if classified into their true group after matching labels by mean, else 0. */
+export function correctMatched(
+  gamma1: ArrayLike<number>,
+  trueGroups: ArrayLike<number>,
+  matching: Matching,
+): number[] {
+  const out: number[] = [];
   for (let i = 0; i < gamma1.length; i++) {
     const component = gamma1[i] > 0.5 ? 0 : 1; // 0 = fitted component 1
     const group = matching.swapped ? 1 - component : component;
-    if (group === trueGroups[i]) hits++;
+    out.push(group === trueGroups[i] ? 1 : 0);
   }
-  return hits / gamma1.length;
+  return out;
 }

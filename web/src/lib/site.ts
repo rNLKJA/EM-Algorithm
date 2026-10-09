@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
 
+export const DEFAULT_SITE_URL = "https://em-algorithm-lab.vercel.app";
+
+/**
+ * The canonical and Open Graph base URL. An unset or blank NEXT_PUBLIC_SITE_URL
+ * (a copied .env.example leaves it empty) means the production domain; anything
+ * else is used as given, so a malformed value still fails the build loudly in
+ * `new URL()` rather than being ignored.
+ */
+export function resolveSiteUrl(raw: string | undefined): string {
+  return raw?.trim() || DEFAULT_SITE_URL;
+}
+
 export const site = {
   name: "EM, one step at a time",
   shortName: "EM Lab",
@@ -8,7 +20,7 @@ export const site = {
   repo: "https://github.com/rNLKJA/EM-Algorithm",
   author: "Sunchuangyu (Rin) Huang",
   authorGithub: "https://github.com/rNLKJA",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://em-algorithm-lab.vercel.app",
+  url: resolveSiteUrl(process.env.NEXT_PUBLIC_SITE_URL),
 } as const;
 
 /** The social card served by app/opengraph-image.tsx (alt text kept in sync there). */
@@ -24,11 +36,26 @@ export const nav = [
   { href: "/stepper", label: "Stepper", blurb: "Four ratings, by hand" },
   { href: "/playground", label: "Playground", blurb: "200 ratings, live" },
   { href: "/pitfalls", label: "Pitfalls", blurb: "Where EM goes wrong" },
+  { href: "/inference", label: "Inference", blurb: "How sure, how many" },
   { href: "/maths", label: "Maths", blurb: "The derivations" },
+  { href: "/methods", label: "Methods", blurb: "Decisions and the model card" },
+  { href: "/tour", label: "Tour", blurb: "Recorded walkthroughs" },
 ] as const;
 
+/**
+ * The git ref that links to the source point at. A deployment can pin it to the
+ * commit it was built from (`NEXT_PUBLIC_REPO_REF`, e.g. passed with
+ * `vercel deploy --build-env`), so files that are not on main yet still resolve;
+ * otherwise links follow main.
+ */
+export const repoRef = process.env.NEXT_PUBLIC_REPO_REF?.trim() || "main";
+
 export function repoFile(path: string): string {
-  return `${site.repo}/blob/main/${path}`;
+  return `${site.repo}/blob/${repoRef}/${path}`;
+}
+
+export function repoTree(path: string): string {
+  return `${site.repo}/tree/${repoRef}/${path}`;
 }
 
 /**
