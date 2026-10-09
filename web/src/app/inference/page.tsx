@@ -100,7 +100,10 @@ export default function InferencePage() {
 
   const covRange = (rates: number[]) =>
     `${pct(Math.min(...rates), 0)} and ${pct(Math.max(...rates), 0)}`;
-  const waldRates = a.coverage.model.params.map((p) => p.wald.coverage.estimate);
+  // both Wald scenarios (model exactly, clipped like the notebook), so the range covers every rate in the table
+  const waldRates = [a.coverage.model, a.coverage.clipped].flatMap((sc) =>
+    sc.params.map((p) => p.wald.coverage.estimate),
+  );
   const bootRates = a.bootstrapCoverage.params.map((p) => p.bootstrap!.coverage.estimate);
   // the comparison sentence is built from the paired intervals, so it claims no more than they show
   const pairedDiffs = pairedCoverageDifferences(a.bootstrapCoverage);

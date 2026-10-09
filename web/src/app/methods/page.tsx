@@ -63,6 +63,10 @@ export default function MethodsPage() {
   const prov = notebookRun.provenance;
   const acc = wilsonInterval(Math.round(notebookRun.summary.accuracyAsWritten * 200), 200);
   const s = INFERENCE_SETTINGS;
+  // Wald coverage across both scenarios (model exactly, clipped like the notebook)
+  const waldCoverage = [inference.coverage.model, inference.coverage.clipped].flatMap((sc) =>
+    sc.params.map((p) => p.wald.coverage.estimate),
+  );
 
   const evaluation: [string, string, ReactNode][] = [
     [
@@ -310,17 +314,9 @@ export default function MethodsPage() {
             </li>
             <li>
               At n = 200 the nominal 95% intervals cover the truth less often than 95%: Wald
-              intervals between{" "}
-              {pct(
-                Math.min(...inference.coverage.model.params.map((p) => p.wald.coverage.estimate)),
-                0,
-              )}{" "}
-              and{" "}
-              {pct(
-                Math.max(...inference.coverage.model.params.map((p) => p.wald.coverage.estimate)),
-                0,
-              )}
-              .
+              intervals between {pct(Math.min(...waldCoverage), 0)} and{" "}
+              {pct(Math.max(...waldCoverage), 0)}, with the model exactly right or clipped like the
+              notebook.
             </li>
             <li>
               The bootstrap coverage study uses B = {s.bootstrapCoverage.B} bootstrap replicates per
@@ -353,8 +349,9 @@ export default function MethodsPage() {
         <Section id="change" eyebrow="6 · next time" title="What I'd change">
           <ul className="prose-notebook list-disc space-y-2 pl-5">
             <li>
-              Fit a censored mixture so ratings at 1 and 10 are treated as &ldquo;at least 10&rdquo;
-              rather than exact values, and repeat the model choice.
+              Fit a censored mixture, so a rating clipped to 10 counts as &ldquo;at least 10&rdquo;
+              (and one clipped to 1 as &ldquo;at most 1&rdquo;) rather than an exact value, and
+              repeat the model choice.
             </li>
             <li>
               Replace the hard variance floor with a weak prior on σ², and report the LRT for
