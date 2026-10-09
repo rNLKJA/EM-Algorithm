@@ -1,4 +1,7 @@
 node_modules/
-_archive/
-*.ipynb
 .venv/
+# the original files are preserved unchanged
+original/
+# web/ has its own prettier config and ignore file
+web/
+*.ipynb
