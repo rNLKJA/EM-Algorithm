@@ -213,13 +213,13 @@ export const STEPPER_PRESETS: StepperPreset[] = [
   {
     id: "overlap",
     label: "A muddled guess",
-    description: "Both groups start in the middle (μ = 4.5 / 5.5, σ = 2). Watch them pull apart.",
-    init: { pi1: 0.5, pi2: 0.5, mu1: 4.5, mu2: 5.5, sigma1: 2, sigma2: 2 },
+    description: "Both groups start near the middle (μ = 4 / 6, σ = 2). Watch them pull apart.",
+    init: { pi1: 0.5, pi2: 0.5, mu1: 4, mu2: 6, sigma1: 2, sigma2: 2 },
   },
   {
     id: "lopsided",
     label: "A lopsided guess",
-    description: "Group 1 starts wide and heavy (π = 0.8, σ = 3), group 2 narrow at 9.",
-    init: { pi1: 0.8, pi2: 0.2, mu1: 5, mu2: 9, sigma1: 3, sigma2: 0.7 },
+    description: "Group 1 starts wide and heavy (π = 0.7, σ = 2.5), group 2 narrow at 8.5.",
+    init: { pi1: 0.7, pi2: 0.3, mu1: 4, mu2: 8.5, sigma1: 2.5, sigma2: 0.8 },
   },
 ];
