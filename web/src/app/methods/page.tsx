@@ -5,6 +5,7 @@ import { Callout } from "@/components/common/callout";
 import { PageHeader } from "@/components/common/page-header";
 import { ScrollX } from "@/components/common/scroll-x";
 import { Markdown } from "@/components/methods/markdown";
+import { GROUNDING_SCOPE } from "@/lib/ai/explain-iteration";
 import { ANTHROPIC_MODELS, OPENAI_DEFAULT_MODEL } from "@/lib/ai/models";
 import { loadDecisionRecords, loadModelCard } from "@/lib/content";
 import { notebookRun } from "@/lib/em/notebook-run";
@@ -87,7 +88,7 @@ export default function MethodsPage() {
     ],
     [
       "The number of components",
-      `AIC and BIC for K = 1 to 4 (${s.modelChoice.restarts} starts each), a sensitivity check without the clipped ratings, selection rates on ${s.selection.S} fresh samples, and a parametric bootstrap LRT (B = ${s.lrt.B})`,
+      `AIC and BIC for K = 1 to 4 (${s.modelChoice.restarts} ordinary starts plus ${s.modelChoice.pileStarts} with a narrow component on the ratings piled at 10.0), sensitivity checks for the variance floor (${[...s.modelChoiceFloors, s.modelChoice.varianceFloor].sort((x, y) => x - y).join(", ")}) and without the clipped ratings, selection rates on ${s.selection.S} fresh samples, and a parametric bootstrap LRT (B = ${s.lrt.B})`,
       <Link key="e" className="link" href="/inference#choosing-k">
         /inference#choosing-k
       </Link>,
@@ -319,8 +320,10 @@ export default function MethodsPage() {
             </li>
             <li>
               The model ignores clipping, so the pile of ratings at 10.0 can be
-              &ldquo;explained&rdquo; by an extra component; on this sample both AIC and BIC choose
-              four.
+              &ldquo;explained&rdquo; by an extra component: on this sample BIC chooses{" "}
+              {inference.modelChoice.full.bestByBic} components and AIC{" "}
+              {inference.modelChoice.full.bestByAic}, and BIC&apos;s choice moves with the variance
+              floor (DR-003).
             </li>
             <li>
               The likelihood-ratio test&apos;s null distribution depends on the variance floor and
@@ -456,11 +459,15 @@ export default function MethodsPage() {
               <h3 className="text-lg font-semibold">Human in the loop, and the record</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 The reply must match a JSON schema and is validated again in the browser. A
-                grounding check lists any number in it that was not in the snapshot. The visitor
-                accepts, edits or rejects each explanation, and every call (failures included) is
-                written without the key to an audit log in the browser&apos;s IndexedDB: time,
-                feature, provider, model, input, output, latency, token usage and the decision. View
-                or export it on the{" "}
+                grounding check lists any number in it that was not in the snapshot; it checks{" "}
+                {GROUNDING_SCOPE}. The visitor accepts, edits or rejects each explanation, and every
+                call is written without the key to an audit log in the browser&apos;s IndexedDB:
+                time, feature, provider, model, input, output, latency, token usage and the
+                decision. Failed calls are recorded too, and a refusal, a cut-off reply or one that
+                failed validation keeps whatever the provider sent back and its token usage. On{" "}
+                {ANTHROPIC_MODELS[1].label} a declined request is retried by Anthropic&apos;s
+                server-side fallback within the same call, and the log shows which model answered.
+                View or export it on the{" "}
                 <Link className="link" href="/ai-log">
                   AI audit log
                 </Link>

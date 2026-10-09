@@ -52,6 +52,10 @@ export interface DecisionRecord extends MarkdownDoc {
   summary: string;
 }
 
+export function capitalise(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 export function loadDecisionRecords(dir = CONTENT_DIR): DecisionRecord[] {
   const decisions = path.join(dir, "decisions");
   return readdirSync(decisions)
@@ -68,7 +72,9 @@ export function loadDecisionRecords(dir = CONTENT_DIR): DecisionRecord[] {
         title: doc.meta.title ?? doc.heading ?? id,
         status: doc.meta.status ?? "",
         date: doc.meta.date ?? "",
-        summary: oneLine ? oneLine[1].trim() : "",
+        // the markdown reads "Decision in one line: every fit…"; on its own in the callout
+        // the sentence needs a capital
+        summary: oneLine ? capitalise(oneLine[1].trim()) : "",
         body: oneLine ? doc.body.replace(oneLine[0], "").replace(/^\s+/, "") : doc.body,
       };
     });

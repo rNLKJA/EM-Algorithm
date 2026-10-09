@@ -29,8 +29,8 @@ A model card for the statistical model at the centre of this project: the two-co
 | Accuracy of the converged fit (same start, 90 iterations to the notebook's tolerance) | 83.5% (167 of 200), Wilson 95% CI 77.7% to 88.0% |
 | Converged parameters (low-mean group first), with observed-information SEs | π₁ 0.221 (0.054), μ₁ 3.36 (0.27), μ₂ 7.02 (0.19), σ₁ 0.86 (0.18), σ₂ 1.46 (0.14) |
 | Parametric bootstrap 95% intervals (B = 1,000, seed 42) | π₁ 0.110 to 0.359; μ₁ 2.86 to 4.11; μ₂ 6.60 to 7.44; σ₁ 0.48 to 1.22; σ₂ 1.16 to 1.76 |
-| Coverage of nominal 95% intervals (simulated data sets of 200) | Wald intervals 84.4% to 91.2% depending on the parameter (500 data sets); percentile bootstrap 90.0% to 91.5% (200 data sets) |
-| Number of components | BIC and AIC both prefer K = 4 on this sample; without the seven clipped ratings BIC prefers K = 2. On fresh samples from the recipe BIC picks K = 2 in 91 of 100 |
+| Coverage of nominal 95% intervals (simulated data sets of 200) | Wald intervals 84.4% to 91.2% depending on the parameter (500 data sets); percentile bootstrap 90.0% to 91.5% (200 data sets). On the same 200 data sets the bootstrap covered more often for π₁, μ₁ and σ₁ (paired 95% intervals exclude 0); for μ₂ and σ₂ the difference is within simulation noise, and the bootstrap intervals are wider for 4 of the 5 parameters |
+| Number of components | On this sample BIC prefers K = 3 and AIC K = 4. BIC's third component is the clipping pile (4.0% at 9.96, σ held at the 0.1 floor); at a floor of 0.25 BIC tips to K = 4 in a near-tie. Without the seven clipped ratings BIC prefers K = 2. On fresh samples from the recipe, clipped like the notebook, BIC picks K = 2 in 91 of 100 |
 | K = 1 vs K = 2 (parametric bootstrap LRT, B = 500) | 2Δℓ = 19.9, bootstrap p = 0.002 (none of 500 null statistics as large) |
 
 All of these, with their seeds and settings, are on the site at /inference.
@@ -41,8 +41,8 @@ All of these, with their seeds and settings, are on the site at /inference.
 - **Stopping early.** The notebook's 15 iterations were not convergence; finishing the run lowers the accuracy from 90.5% to 83.5%.
 - **Local maxima.** 5% of random starts (10 of 200, Wilson 2.7% to 9.0%) reach a different maximum with a higher likelihood (ℓ = −413.99 against −415.37): a narrow component around 8.07. The reported fit is the one the notebook's run was heading to.
 - **Unbounded likelihood.** A component can collapse onto one value; the clipped pile at 10.0 is a ready-made trap (DR-003).
-- **Misspecification.** The clipping is not modelled, so model-selection criteria add a component for the pile at 10.
-- **Over-confident intervals at n = 200.** Wald intervals cover only 84% to 91% of the time, not 95%; bootstrap intervals cover 90% to 92%, better but still short.
+- **Misspecification.** The clipping is not modelled, so model-selection criteria add a component for the pile at 10, and how much that pile is worth depends on the variance floor.
+- **Over-confident intervals at n = 200.** Wald intervals cover only 84% to 91% of the time, not 95%; bootstrap intervals cover 90% to 92%, still short, and better than Wald by more than simulation noise for three of the five parameters only.
 
 ## Ethical considerations
 

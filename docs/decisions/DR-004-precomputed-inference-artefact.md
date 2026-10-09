@@ -32,9 +32,11 @@ It is the same trade as the notebook parity data (DR-001): a committed, regenera
 
 - Generation takes about 130 seconds; the artefact test takes about 10 seconds.
 - Re-running the bootstrap in the browser with seed 42 reproduces the published intervals exactly, which is the simplest possible reproducibility check for a reader.
+- Same seed does not always mean the same last digit. Review found that Chrome 155 returns correctly rounded `Math.exp` and `Math.log` results where Node 26 sometimes differs in the last bit, and the numerical Hessian magnifies that to about 3 × 10⁻⁷ relative in standard errors and interval widths. The coverage re-run in Chrome therefore reported "different numbers" against an up-to-date artefact. The comparison now requires counts (coverage hits, failed fits, iterations) to match exactly and other numbers to agree to 10⁻⁵ relative, and the artefact test compares Hessian-derived values at 10⁻⁶ relative instead of 10⁻⁹, so a future Node with the newer maths library does not fail it for nothing.
 - The weak spot: the slow studies are verified only through their small versions. A change that altered only large-sample behaviour would slip through until someone regenerated, and a regeneration with an edited setting would not be flagged unless the settings test noticed.
 
 ## What I'd change
 
 - Regenerate the artefact in a scheduled CI job and fail on any diff.
 - Spread the slow studies across worker threads so the generator finishes in seconds and could run at build time.
+- Compute the Hessian with automatic differentiation or analytic second derivatives, which would make the standard errors far less sensitive to the last bit of `exp` and `log`.
