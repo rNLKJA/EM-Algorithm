@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { usePlayback } from "@/hooks/use-playback";
 import { useTweenedParams } from "@/hooks/use-tweened-params";
+import { ratingAxis } from "@/lib/charts/axes";
 import { diagnoseFit } from "@/lib/em/diagnose";
 import { isNonDecreasing, logLikelihood, paramsAt } from "@/lib/em/em";
 import { pyFixed, sci } from "@/lib/format";
@@ -72,6 +73,10 @@ export function Playground() {
     );
     return Math.max(0.2, peak * 1.6);
   }, [dataset.truth]);
+
+  // unclipped data can spill past 1 to 10: widen the axis so every rating is counted and drawn
+  const axis = useMemo(() => ratingAxis(dataset.ratings), [dataset.ratings]);
+  const meanRange: [number, number] = [axis.domain[0] + 0.25, axis.domain[1] - 0.25];
 
   const degeneracy = useMemo(
     () => (result ? diagnoseFit(dataset.ratings, result) : null),
@@ -173,6 +178,9 @@ export function Playground() {
           truth={showTruth ? dataset.truth : null}
           height={340}
           yMax={yMax}
+          domain={axis.domain}
+          histRange={axis.histRange}
+          bins={axis.bins}
           draggable={config.init === "manual"}
           onMeansChange={(mu1, mu2) =>
             update({ init: "manual", manual: { ...config.manual, mu1, mu2 } })
@@ -314,8 +322,8 @@ export function Playground() {
                 label="μ₁"
                 accent={1}
                 value={config.manual.mu1}
-                min={0.75}
-                max={10.25}
+                min={meanRange[0]}
+                max={meanRange[1]}
                 step={0.05}
                 onChange={(mu1) => update({ manual: { ...config.manual, mu1 } })}
               />
@@ -323,8 +331,8 @@ export function Playground() {
                 label="μ₂"
                 accent={2}
                 value={config.manual.mu2}
-                min={0.75}
-                max={10.25}
+                min={meanRange[0]}
+                max={meanRange[1]}
                 step={0.05}
                 onChange={(mu2) => update({ manual: { ...config.manual, mu2 } })}
               />
