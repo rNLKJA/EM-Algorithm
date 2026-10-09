@@ -377,7 +377,10 @@ export default function PitfallsPage() {
             </p>
           </div>
           <RestartGallery />
-          <Legend className="justify-end" />
+          <Legend
+            labels={["Lower-mean component", "Higher-mean component"]}
+            className="justify-end"
+          />
         </Section>
 
         <Section id="variance-collapse" index={4} title="Variance collapse">

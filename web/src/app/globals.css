@@ -196,6 +196,16 @@
 }
 
 @layer components {
+  /* a run whose labels switched in the census strip (components/pitfalls/switch-census.tsx):
+     neutral ink plus hatching, so it needs neither colour nor the component palette */
+  .census-switched {
+    background-color: color-mix(in oklab, var(--foreground) 72%, transparent);
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 3px,
+      color-mix(in oklab, var(--background) 55%, transparent) 3px 4.5px
+    );
+  }
   /* sideways scroll box (components/common/scroll-x.tsx): fade the edge hiding more */
   .scroll-x {
     overflow-x: auto;
