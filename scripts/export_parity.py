@@ -127,16 +127,17 @@ def instrument(ns: dict) -> list[dict]:
 
 
 def matched_accuracy(gamma1: np.ndarray, mu_fit: tuple[float, float], true_groups, true_mu):
-    """Accuracy after matching fitted components to true groups by mean (min total |d mu|)."""
-    keep = abs(mu_fit[0] - true_mu[0]) + abs(mu_fit[1] - true_mu[1])
-    swap = abs(mu_fit[0] - true_mu[1]) + abs(mu_fit[1] - true_mu[0])
+    """Accuracy after matching fitted components to true groups by the order of their means.
+
+    The lower fitted mean goes with the lower true mean (web/src/lib/em/labels.ts does the
+    same). In 1-D that always minimises the total |d mu|, and it stays decisive when both
+    fitted means fall on the same side of both true means, where the two totals tie.
+    """
+    swapped = bool((mu_fit[0] < mu_fit[1]) != (true_mu[0] < true_mu[1]))
     # true group 0 corresponds to fitted component 1 unless swapped
     pred_fit1 = gamma1 > 0.5  # True -> fitted component 1
-    if keep <= swap:
-        pred_true = np.where(pred_fit1, 0, 1)
-    else:
-        pred_true = np.where(pred_fit1, 1, 0)
-    return float(np.mean(pred_true == true_groups)), bool(swap < keep)
+    pred_true = np.where(pred_fit1, 1, 0) if swapped else np.where(pred_fit1, 0, 1)
+    return float(np.mean(pred_true == true_groups)), swapped
 
 
 def simulate(cells: list[dict], seed: int, max_iterations: int, tolerance: float) -> dict:

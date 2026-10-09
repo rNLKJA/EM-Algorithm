@@ -16,7 +16,8 @@ import { Switch } from "@/components/ui/switch";
 import { usePlayback } from "@/hooks/use-playback";
 import { useTweenedParams } from "@/hooks/use-tweened-params";
 import type { IterationInput } from "@/lib/ai/explain-iteration";
-import { eStep, isNonDecreasing, isNonDegenerate, logLikelihood, paramsAt } from "@/lib/em/em";
+import { diagnoseFit } from "@/lib/em/diagnose";
+import { eStep, isNonDecreasing, logLikelihood, paramsAt } from "@/lib/em/em";
 import { pyFixed, sci } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Results } from "./results";
@@ -74,6 +75,11 @@ export function Playground() {
     return Math.max(0.2, peak * 1.6);
   }, [dataset.truth]);
 
+  const degeneracy = useMemo(
+    () => (result ? diagnoseFit(dataset.ratings, result) : null),
+    [result, dataset.ratings],
+  );
+
   const status = (() => {
     if (!result) return model.pending ? "Running EM in a background worker..." : "No result yet.";
     const n = result.iterations.length;
@@ -82,10 +88,16 @@ export function Playground() {
     const last = result.iterations[n - 1];
     if (result.stopReason === "converged")
       return `Converged after ${n} iterations: the log-likelihood moved by less than ${config.tolerance.toExponential(0)}.`;
-    if (result.stopReason === "degenerate") {
-      const p = last.params;
-      const k = isNonDegenerate({ ...p, sigma2: 1 }) ? 2 : 1;
-      const sigma = k === 1 ? p.sigma1 : p.sigma2;
+    if (degeneracy?.kind === "underflow") {
+      const [z1, z2] = degeneracy.z.map((z) => z.toFixed(0));
+      const x = Number.isInteger(degeneracy.x) ? String(degeneracy.x) : degeneracy.x.toFixed(2);
+      return `Numerical underflow at iteration ${n}: rating ${x} sits ${z1}σ from μ₁ and ${z2}σ from μ₂, so both densities round to 0 and its responsibilities are 0/0 = NaN. The notebook's normal_pdf does the same. Not a collapse: try wider spreads or another start.`;
+    }
+    if (degeneracy?.kind === "empty") {
+      return `Component ${degeneracy.component} lost every rating at iteration ${n}: its responsibilities all rounded to 0, so its mean is 0/0 = NaN. Try another start.`;
+    }
+    if (degeneracy?.kind === "collapse") {
+      const { component: k, sigma } = degeneracy;
       const size = sigma > 0 ? `shrank to ${sci(sigma, 1)}` : "hit 0";
       return `Collapsed at iteration ${n}: component ${k}'s σ ${size}, a spike whose likelihood grows without bound (σ → 0). Not a fit: EM stops here. Try another start or a variance floor.`;
     }
@@ -158,7 +170,12 @@ export function Playground() {
             />
           </div>
         </div>
-        <p className="mt-3 flex items-center gap-2 text-sm" aria-live="polite">
+        {/* Screen readers hear the status when playback stops or on a manual step, not
+            on every animation tick (up to 16 a second at 16×). */}
+        <p className="sr-only" aria-live="polite" aria-atomic>
+          {playback.playing ? "Playing" : `t = ${stage}. ${status}`}
+        </p>
+        <p className="mt-3 flex items-center gap-2 text-sm">
           {model.pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
           <span className="num shrink-0 self-start rounded bg-muted px-1.5 py-0.5 text-xs whitespace-nowrap">
             t = {stage}

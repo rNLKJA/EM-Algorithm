@@ -5,6 +5,7 @@ import { ConsoleBlock } from "@/components/common/console";
 import { ScrollX } from "@/components/common/scroll-x";
 import { ComponentSwatch } from "@/components/common/legend";
 import { ParamSlider } from "@/components/common/param-slider";
+import { paramsFinite } from "@/lib/em/diagnose";
 import { eStep, paramsAt, posterior } from "@/lib/em/em";
 import { accuracyAsWritten, accuracyMatched, matchByMean } from "@/lib/em/labels";
 import { finalResultsConsole, fitConsole } from "@/lib/em/notebook-console";
@@ -13,13 +14,13 @@ import { PARAM_KEYS, type FitResult, type MixtureParams } from "@/lib/em/types";
 import { pyPercent, sci, smart } from "@/lib/format";
 import { wilsonInterval } from "@/lib/stats/intervals";
 import { cn } from "@/lib/utils";
+import type { Dataset } from "./use-playground";
 
 /** Wilson 95% interval for an accuracy measured on n ratings. */
 function wilsonText(accuracy: number, n: number) {
   const w = wilsonInterval(Math.round(accuracy * n), n);
   return `${pyPercent(w.lower)} to ${pyPercent(w.upper)}`;
 }
-import type { Dataset } from "./use-playground";
 
 export function Results({
   result,
@@ -41,6 +42,9 @@ export function Results({
     if (stage >= 1 && stage === result.iterations.length) return result.finalGamma1;
     return Array.from(eStep(dataset.ratings, paramsAt(result, Math.max(0, stage - 1))).gamma1);
   }, [result, stage, dataset.ratings]);
+  // NaN parameters or responsibilities (underflow, an emptied component) leave nothing to
+  // match, score or classify; the numbers would come from comparisons against NaN.
+  const usable = paramsFinite(params) && gamma1.every(Number.isFinite);
   const accWritten = accuracyAsWritten(gamma1, dataset.groups);
   const accMatched = accuracyMatched(gamma1, dataset.groups, matching);
   const names = dataset.groupNames;
@@ -97,7 +101,13 @@ export function Results({
                           </span>
                         </td>
                       ))}
-                      <td className="py-2 font-sans">{matchedName(k)}</td>
+                      <td className="py-2 font-sans">
+                        {usable ? (
+                          matchedName(k)
+                        ) : (
+                          <span className="text-muted-foreground">n/a</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -105,11 +115,23 @@ export function Results({
             </table>
           </ScrollX>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {matching.swapped ? (
+            {!usable ? (
+              <>
+                The parameters at this stage are not numbers (NaN), so there is nothing to match
+                against the true groups. Step back to an earlier iteration to compare.
+              </>
+            ) : matching.swapped ? (
               <>
                 <strong className="font-medium text-foreground">Labels switched.</strong> Component
-                1 ended up describing <em>{names[1].toLowerCase()}</em>, the group the data calls
-                group 2. EM&apos;s numbering is arbitrary, so every comparison here first matches
+                1 ended up describing{" "}
+                {dataset.original ? (
+                  <>
+                    <em>{names[1].toLowerCase()}</em>, the group the data calls group 2
+                  </>
+                ) : (
+                  "group 2"
+                )}
+                . EM&apos;s numbering is arbitrary, so every comparison here first matches
                 components to groups by their means.
               </>
             ) : (
@@ -120,43 +142,67 @@ export function Results({
 
         <section aria-label="Accuracy" className="sheet min-w-0 p-4 sm:p-5">
           <h2 className="text-base font-semibold">Classification accuracy</h2>
-          <dl className="mt-3 grid grid-cols-2 gap-3">
+          <dl className={cn("mt-3 grid grid-cols-2 gap-3", !usable && "opacity-60")}>
             <div className="rounded-xl border p-3">
               <dt className="text-xs text-muted-foreground">matched by mean</dt>
-              <dd className="num mt-1 text-2xl font-medium">{pyPercent(accMatched)}</dd>
-              <dd className="num mt-1 text-[0.72rem] text-muted-foreground">
-                95% CI {wilsonText(accMatched, gamma1.length)}
+              <dd className="num mt-1 text-2xl font-medium">
+                {usable ? pyPercent(accMatched) : "n/a"}
               </dd>
+              {usable && (
+                <dd className="num mt-1 text-[0.72rem] text-muted-foreground">
+                  95% CI {wilsonText(accMatched, gamma1.length)}
+                </dd>
+              )}
             </div>
             <div className="rounded-xl border p-3">
               <dt className="text-xs text-muted-foreground">as the notebook computes it</dt>
               <dd
                 className={cn(
                   "num mt-1 text-2xl font-medium",
-                  accWritten !== accMatched && "text-correction",
+                  usable && accWritten !== accMatched && "text-correction",
                 )}
               >
-                {pyPercent(accWritten)}
+                {usable ? pyPercent(accWritten) : "n/a"}
               </dd>
-              <dd className="num mt-1 text-[0.72rem] text-muted-foreground">
-                95% CI {wilsonText(accWritten, gamma1.length)}
-              </dd>
+              {usable && (
+                <dd className="num mt-1 text-[0.72rem] text-muted-foreground">
+                  95% CI {wilsonText(accWritten, gamma1.length)}
+                </dd>
+              )}
             </div>
           </dl>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            The notebook scores <span className="num">(γ₁ &gt; 0.5)</span> against true labels where
-            1 means group 2, so its number is only right when the labels have switched.
-            {accWritten !== accMatched
-              ? " Here they have not, which is why the two disagree."
-              : " Here they agree."}{" "}
-            Responsibilities are taken from the E-step of iteration {Math.max(1, stage)}, like the
-            notebook&apos;s <span className="num">em.gamma1</span>. The intervals are Wilson 95%
-            intervals over the {gamma1.length} ratings.
-          </p>
+          {!usable ? (
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Not defined at t = {stage}: the responsibilities or parameters here contain NaN (see
+              the status line above), and any score computed from them would only reflect how
+              comparisons with NaN happen to fall.
+            </p>
+          ) : (
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              The notebook scores <span className="num">(γ₁ &gt; 0.5)</span> against true labels
+              where 1 means group 2, so its number is only right when the labels have switched.
+              {accWritten !== accMatched
+                ? " Here they have not, which is why the two disagree."
+                : " Here they agree."}{" "}
+              Responsibilities are taken from the E-step of iteration {Math.max(1, stage)}, like the
+              notebook&apos;s <span className="num">em.gamma1</span>. The intervals are Wilson 95%
+              intervals over the {gamma1.length} ratings.
+            </p>
+          )}
         </section>
       </div>
 
-      <ClassifyNewRating params={params} names={names} swapped={matching.swapped} />
+      {usable ? (
+        <ClassifyNewRating params={params} names={names} swapped={matching.swapped} />
+      ) : (
+        <section aria-label="Classify a new rating" className="sheet p-4 sm:p-5">
+          <h2 className="text-base font-semibold">Classify a new rating</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Unavailable at t = {stage}: with NaN parameters every posterior is NaN. Step back to an
+            earlier iteration to classify with those parameters.
+          </p>
+        </section>
+      )}
 
       {isNotebookStart && (
         <ParityPanel result={result} n={dataset.ratings.length} stopping={stopping} />
@@ -164,7 +210,8 @@ export function Results({
 
       <details className="sheet group p-4 sm:p-5">
         <summary className="cursor-pointer text-base font-semibold select-none">
-          Full trace ({result.iterations.length} iterations)
+          Full trace ({result.iterations.length}{" "}
+          {result.iterations.length === 1 ? "iteration" : "iterations"})
         </summary>
         <div
           className="mt-3 max-h-96 overflow-auto"

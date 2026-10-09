@@ -21,11 +21,19 @@ export interface Matching {
   cost: number;
 }
 
-/** Match fitted components to true groups by minimising the total distance between means. */
+/**
+ * Match fitted components to true groups by the order of their means: the lower
+ * fitted mean goes with the lower true mean. In one dimension this order-preserving
+ * matching always minimises the total |mu_fit - mu_true|, and unlike comparing the
+ * two totals it stays decisive when both fitted means sit on the same side of both
+ * true means (the totals then tie, e.g. fitted 3.37 and 3.51 against true 7.5 and 4.0).
+ */
 export function matchByMean(fitted: GroupMeans, truth: GroupMeans): Matching {
-  const keep = Math.abs(fitted.mu1 - truth.mu1) + Math.abs(fitted.mu2 - truth.mu2);
-  const swap = Math.abs(fitted.mu1 - truth.mu2) + Math.abs(fitted.mu2 - truth.mu1);
-  return swap < keep ? { swapped: true, cost: swap } : { swapped: false, cost: keep };
+  const swapped = fitted.mu1 < fitted.mu2 !== truth.mu1 < truth.mu2;
+  const cost = swapped
+    ? Math.abs(fitted.mu1 - truth.mu2) + Math.abs(fitted.mu2 - truth.mu1)
+    : Math.abs(fitted.mu1 - truth.mu1) + Math.abs(fitted.mu2 - truth.mu2);
+  return { swapped, cost };
 }
 
 /** Re-index fitted parameters so component k lines up with true group k. */

@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/common/page-header";
 import { Playground } from "@/components/playground/playground";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Playground: a mixture you can watch converge",
   description:
     "Run the notebook's EM algorithm on its 200 synthetic movie ratings or on data you generate, from a random, k-means++ or hand-placed start, and watch the log-likelihood climb.",
-};
+  path: "/playground",
+});
 
 export default function PlaygroundPage() {
   return (

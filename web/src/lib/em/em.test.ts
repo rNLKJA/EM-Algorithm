@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { collapseInit } from "./collapse";
+import { diagnoseFit, diagnoseStep } from "./diagnose";
 import {
   eStep,
   exactLogLikelihood,
@@ -167,6 +168,74 @@ describe("variance collapse", () => {
     expect(isNonDecreasing(result.iterations.map((it) => it.logLikelihood))).toBe(true);
   });
 });
+
+describe("diagnosing a degenerate run", () => {
+  it("names a real collapse as a collapse of the spiked component", () => {
+    for (let s = 5; s <= 53; s += 8) {
+      const result = fit(notebookRun.ratings, collapseInit(notebookRun.ratings, 10, s / 100), {
+        maxIterations: 300,
+        tolerance: 1e-10,
+      });
+      const d = diagnoseFit(notebookRun.ratings, result);
+      expect(d?.kind).toBe("collapse");
+      expect(d?.kind === "collapse" && d.component).toBe(2);
+    }
+  });
+
+  it("tells density underflow (γ = 0/0) apart from collapse", () => {
+    // Playground, Drag start: both means near 1 with σ = 0.1, so rating 10 is ~90σ from both
+    const init: MixtureParams = {
+      pi1: 0.5,
+      pi2: 0.5,
+      mu1: 0.75,
+      mu2: 1.25,
+      sigma1: 0.1,
+      sigma2: 0.1,
+    };
+    const result = fit(notebookRun.ratings, init, { maxIterations: 15, tolerance: 1e-4 });
+    expect(result.stopReason).toBe("degenerate");
+    expect(result.iterations).toHaveLength(1);
+    const d = diagnoseFit(notebookRun.ratings, result);
+    expect(d?.kind).toBe("underflow");
+    if (d?.kind !== "underflow") return;
+    expect(Math.min(...d.z)).toBeGreaterThan(38);
+    expect(Number.isNaN(result.finalGamma1[notebookRun.ratings.indexOf(d.x)])).toBe(true);
+
+    // Stepper, "Your own": both means at 10.5, σ = 0.2; rating 2 is 42.5σ from each
+    const before: MixtureParams = {
+      pi1: 0.5,
+      pi2: 0.5,
+      mu1: 10.5,
+      mu2: 10.5,
+      sigma1: 0.2,
+      sigma2: 0.2,
+    };
+    const after = mStep([2, 3, 7, 8], ...gammas([2, 3, 7, 8], before));
+    expect(diagnoseStep([2, 3, 7, 8], before, after)).toEqual({
+      kind: "underflow",
+      x: 2,
+      z: [42.5, 42.5],
+    });
+  });
+
+  it("reports a component that lost every rating as empty", () => {
+    const before: MixtureParams = { pi1: 0.5, pi2: 0.5, mu1: 2, mu2: 60, sigma1: 1, sigma2: 0.5 };
+    const after = mStep([1, 2, 3], ...gammas([1, 2, 3], before));
+    expect(after.pi2).toBe(0);
+    expect(diagnoseStep([1, 2, 3], before, after)).toEqual({ kind: "empty", component: 2 });
+  });
+
+  it("returns null for healthy fits", () => {
+    const result = fit(notebookRun.ratings, notebookRun.init, notebookRun.fit);
+    expect(diagnoseFit(notebookRun.ratings, result)).toBeNull();
+    expect(diagnoseStep([1, 2, 3], params, params)).toBeNull();
+  });
+});
+
+function gammas(data: number[], p: MixtureParams): [Float64Array, Float64Array] {
+  const e = eStep(data, p);
+  return [e.gamma1, e.gamma2];
+}
 
 describe("posterior for a new observation", () => {
   it("sums to one", () => {

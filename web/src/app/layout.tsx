@@ -88,6 +88,7 @@ export const metadata: Metadata = {
     description: site.description,
     type: "website",
     siteName: site.name,
+    locale: "en_AU",
   },
   twitter: { card: "summary_large_image", title: site.name, description: site.description },
 };
