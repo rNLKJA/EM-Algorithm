@@ -82,6 +82,22 @@ describe("label matching", () => {
     expect(aligned.pi1).toBeCloseTo(0.656, 3);
   });
 
+  it("matches by mean order, even when both fitted means sit on one side of the truth", () => {
+    const truth = { mu1: 7.5, mu2: 4.0 }; // group 1 is the high-mean group
+    // Make your own (seed 2025) at t = 0: both fitted means below 4, so |d mu| totals tie
+    expect(matchByMean({ mu1: 3.368, mu2: 3.509 }, truth).swapped).toBe(true);
+    expect(matchByMean({ mu1: 3.509, mu2: 3.368 }, truth).swapped).toBe(false);
+    // both above 7.5
+    expect(matchByMean({ mu1: 8, mu2: 9 }, truth).swapped).toBe(true);
+    expect(matchByMean({ mu1: 9, mu2: 8 }, truth).swapped).toBe(false);
+    // straddling: agrees with minimising the total distance
+    expect(matchByMean({ mu1: 4.02, mu2: 7.36 }, truth)).toEqual({
+      swapped: true,
+      cost: Math.abs(4.02 - 4.0) + Math.abs(7.36 - 7.5),
+    });
+    expect(matchByMean({ mu1: 7.36, mu2: 4.02 }, truth).swapped).toBe(false);
+  });
+
   it("as-written accuracy inverts when the labels did not switch", () => {
     const gamma1 = [0.9, 0.8, 0.1, 0.2];
     const groups = [0, 0, 1, 1];
