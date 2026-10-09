@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ConsoleBlock } from "@/components/common/console";
+import { ScrollX } from "@/components/common/scroll-x";
 import { ComponentSwatch } from "@/components/common/legend";
 import { ParamSlider } from "@/components/common/param-slider";
 import { eStep, paramsAt, posterior } from "@/lib/em/em";
@@ -9,7 +10,7 @@ import { accuracyAsWritten, accuracyMatched, matchByMean } from "@/lib/em/labels
 import { finalResultsConsole, fitConsole } from "@/lib/em/notebook-console";
 import { notebookRun } from "@/lib/em/notebook-run";
 import { PARAM_KEYS, type FitResult, type MixtureParams } from "@/lib/em/types";
-import { pyPercent, sci } from "@/lib/format";
+import { pyPercent, sci, smart } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Dataset } from "./use-playground";
 
@@ -17,11 +18,13 @@ export function Results({
   result,
   stage,
   dataset,
+  stopping,
   isNotebookStart,
 }: {
   result: FitResult;
   stage: number;
   dataset: Dataset;
+  stopping: { maxIterations: number; tolerance: number };
   isNotebookStart: boolean;
 }) {
   const params = paramsAt(result, stage);
@@ -41,7 +44,7 @@ export function Results({
       <div className="grid gap-6 xl:grid-cols-2">
         <section aria-label="Parameters" className="sheet min-w-0 p-4 sm:p-5">
           <h2 className="text-base font-semibold">Parameters at t = {stage}</h2>
-          <div className="mt-3 overflow-x-auto">
+          <ScrollX label="Parameters" className="mt-3">
             <table className="w-full min-w-[18rem] text-sm">
               <thead>
                 <tr className="text-left text-xs text-muted-foreground">
@@ -81,7 +84,7 @@ export function Results({
                       </th>
                       {v.map((x, i) => (
                         <td key={i} className="py-2 pr-2">
-                          {Number.isFinite(x) ? x.toFixed(3) : String(x)}
+                          {smart(x, 3)}
                           <span className="block text-[0.72rem] text-muted-foreground">
                             true {tv[i].toFixed(1)}
                           </span>
@@ -93,7 +96,7 @@ export function Results({
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollX>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {matching.swapped ? (
               <>
@@ -141,13 +144,20 @@ export function Results({
 
       <ClassifyNewRating params={params} names={names} swapped={matching.swapped} />
 
-      {isNotebookStart && <ParityPanel result={result} n={dataset.ratings.length} />}
+      {isNotebookStart && (
+        <ParityPanel result={result} n={dataset.ratings.length} stopping={stopping} />
+      )}
 
       <details className="sheet group p-4 sm:p-5">
         <summary className="cursor-pointer text-base font-semibold select-none">
           Full trace ({result.iterations.length} iterations)
         </summary>
-        <div className="mt-3 max-h-96 overflow-auto">
+        <div
+          className="mt-3 max-h-96 overflow-auto"
+          tabIndex={0}
+          role="region"
+          aria-label="Full trace table (scrolls)"
+        >
           <table className="num w-full min-w-[36rem] text-xs">
             <thead className="sticky top-0 bg-card">
               <tr className="text-left text-muted-foreground">
@@ -171,7 +181,7 @@ export function Results({
                   </td>
                   {(["pi1", "mu1", "mu2", "sigma1", "sigma2"] as const).map((k) => (
                     <td key={k} className="py-1 pr-3">
-                      {it.params[k].toFixed(4)}
+                      {smart(it.params[k], 4)}
                     </td>
                   ))}
                 </tr>
@@ -244,7 +254,19 @@ function ClassifyNewRating({
   );
 }
 
-function ParityPanel({ result, n }: { result: FitResult; n: number }) {
+function ParityPanel({
+  result,
+  n,
+  stopping,
+}: {
+  result: FitResult;
+  n: number;
+  stopping: { maxIterations: number; tolerance: number };
+}) {
+  const notebookRule =
+    stopping.maxIterations === notebookRun.fit.maxIterations &&
+    stopping.tolerance === notebookRun.fit.tolerance;
+  const call = `em.fit(max_iterations=${stopping.maxIterations}, tolerance=${stopping.tolerance.toExponential(0)})`;
   const overlap = Math.min(result.iterations.length, notebookRun.iterations.length);
   let maxDiff = 0;
   for (let i = 0; i < overlap; i++) {
@@ -281,16 +303,23 @@ function ParityPanel({ result, n }: { result: FitResult; n: number }) {
         (largest absolute difference in any π, μ, σ or log-likelihood).
         {matchesPrinted &&
           " The console below is regenerated from this run and is identical, character for character, to what the notebook printed."}
+        {!notebookRule && (
+          <>
+            {" "}
+            Your stopping rule differs from the notebook&apos;s (
+            <span className="num">
+              max_iterations={notebookRun.fit.maxIterations}, tolerance=
+              {notebookRun.fit.tolerance.toExponential(0)}
+            </span>
+            ), so the console below is what the notebook&apos;s code would print with yours.
+          </>
+        )}
       </p>
       <details>
         <summary className="cursor-pointer text-sm font-medium select-none">
           Replay the notebook&apos;s console output
         </summary>
-        <ConsoleBlock
-          className="mt-3"
-          label="em.fit(max_iterations=15, tolerance=1e-4), regenerated"
-          maxHeight={420}
-        >
+        <ConsoleBlock className="mt-3" label={`${call}, regenerated`} maxHeight={420}>
           {text}
         </ConsoleBlock>
       </details>
