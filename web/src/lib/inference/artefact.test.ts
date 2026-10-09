@@ -13,10 +13,17 @@ import { inference } from "./results";
 import { bootstrapSummary, notebookMle, runCoverage } from "./tasks";
 import { CHECK_SETTINGS, INFERENCE_SETTINGS, NOTEBOOK_CLIP } from "./settings";
 
-/** stored numbers are rounded to 10 significant digits */
-function close(actual: number, stored: number) {
+/**
+ * Stored numbers are rounded to 10 significant digits. Values that come out of
+ * the numerical Hessian (standard errors, Wald bounds) get a looser tolerance:
+ * engines that round Math.exp and Math.log differently in the last bit (Chrome
+ * 155's V8 against Node 26's) move them by about 3e-7 relative.
+ */
+const REL = 1e-9;
+const HESSIAN_REL = 1e-6;
+function close(actual: number, stored: number, rel = REL) {
   if (Number.isNaN(stored)) return expect(actual).toBeNaN();
-  expect(Math.abs(actual - stored)).toBeLessThanOrEqual(1e-9 * Math.max(1, Math.abs(stored)));
+  expect(Math.abs(actual - stored)).toBeLessThanOrEqual(rel * Math.max(1, Math.abs(stored)));
 }
 
 const data = notebookRun.ratings;
@@ -27,7 +34,11 @@ describe("inference artefact", { timeout: 120_000 }, () => {
     const fit = notebookMle();
     const s = summariseFit(data, fit.params);
     s.theta.forEach((v, i) => close(v, inference.mle.theta[i]));
-    s.se!.forEach((v, i) => close(v, inference.mle.se![i]));
+    s.se!.forEach((v, i) => close(v, inference.mle.se![i], HESSIAN_REL));
+    s.wald!.forEach((ci, i) => {
+      close(ci.lower, inference.mle.wald![i].lower, HESSIAN_REL);
+      close(ci.upper, inference.mle.wald![i].upper, HESSIAN_REL);
+    });
     close(s.logLikelihood, inference.mle.logLikelihood);
     expect(fit.iterations).toBe(inference.mle.iterations);
   });
@@ -64,8 +75,15 @@ describe("inference artefact", { timeout: 120_000 }, () => {
 
   it("choosing K, with and without the clipped ratings", () => {
     const full = compareComponentCounts(data, INFERENCE_SETTINGS.modelChoice);
-    full.rows.forEach((r, i) => close(r.ll, inference.modelChoice.full.rows[i].ll));
+    full.rows.forEach((r, i) => {
+      close(r.ll, inference.modelChoice.full.rows[i].ll);
+      expect(r.floorBinding).toBe(inference.modelChoice.full.rows[i].floorBinding);
+    });
     expect(full.bestByBic).toBe(inference.modelChoice.full.bestByBic);
+    expect(full.bestByAic).toBe(inference.modelChoice.full.bestByAic);
+    // regression: the best K = 3 fit has a component on the pile at 10.0, and BIC picks it
+    expect(full.rows.find((r) => r.K === 3)!.ll).toBeGreaterThanOrEqual(-403.24);
+    expect(full.bestByBic).toBe(3);
     const trimmed = compareComponentCounts(withoutClipped(data), INFERENCE_SETTINGS.modelChoice);
     trimmed.rows.forEach((r, i) => close(r.ll, inference.modelChoice.withoutClipped.rows[i].ll));
     expect(inference.modelChoice.dropped).toBe(7);

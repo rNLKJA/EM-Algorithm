@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useEmWorker } from "@/hooks/use-em-worker";
+import { sameNumbers } from "@/lib/inference/compare";
 import type { InferenceTask, InferenceTaskResult } from "@/lib/inference/tasks";
 
 type Kind = InferenceTask["task"];
@@ -26,26 +27,6 @@ export interface RerunState<K extends Kind> {
   error: string | null;
   run: (seed: number) => void;
   reset: () => void;
-}
-
-/** True when every number in a and b agrees to `rel` (the artefact keeps 10 significant digits). */
-export function sameNumbers(a: unknown, b: unknown, rel = 1e-8): boolean {
-  if (typeof a === "number" && typeof b === "number") {
-    if (Number.isNaN(a) && Number.isNaN(b)) return true;
-    return Math.abs(a - b) <= rel * Math.max(1, Math.abs(a), Math.abs(b));
-  }
-  if (Array.isArray(a) && Array.isArray(b))
-    return a.length === b.length && a.every((v, i) => sameNumbers(v, b[i], rel));
-  if (a && b && typeof a === "object" && typeof b === "object") {
-    const ka = Object.keys(a as object);
-    return (
-      ka.length === Object.keys(b as object).length &&
-      ka.every((k) =>
-        sameNumbers((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k], rel),
-      )
-    );
-  }
-  return a === b;
 }
 
 /**

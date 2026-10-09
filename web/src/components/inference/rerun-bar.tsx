@@ -113,7 +113,8 @@ export function RerunBar({
           </p>
         ) : reproduced === false ? (
           <p className="text-xs text-destructive">
-            Same seed, different numbers: the published artefact is out of date.
+            Same seed, different numbers (beyond last-digit rounding): the published artefact is out
+            of date.
           </p>
         ) : null}
       </div>

@@ -308,23 +308,94 @@ export function randomGmm(data: ArrayLike<number>, K: number, rng: Rng): Gmm {
   return { weights: means.map(() => 1 / K), means, sds };
 }
 
+/** A value repeated in the data (clipping or rounding piles ratings onto it). */
+export interface Pile {
+  value: number;
+  count: number;
+}
+
+/** At most this many piles get their own starts, largest first. */
+export const MAX_PILES = 2;
+
+/**
+ * Values that occur at least `minCount` times, largest pile first (ties broken
+ * by value). Continuous data have none; the notebook's clipping made one, seven
+ * ratings at exactly 10.0.
+ */
+export function findPiles(data: ArrayLike<number>, minCount = 3): Pile[] {
+  const counts = new Map<number, number>();
+  for (let i = 0; i < data.length; i++) counts.set(data[i], (counts.get(data[i]) ?? 0) + 1);
+  return [...counts.entries()]
+    .filter(([, count]) => count >= minCount)
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count || a.value - b.value);
+}
+
 export type StartKind = "kmeans++" | "forgy" | "random";
 const START_KINDS: StartKind[] = ["kmeans++", "forgy", "random"];
+const START_MAKERS = { "kmeans++": kmeansPlusPlusGmm, forgy: forgyGmm, random: randomGmm };
+
+/**
+ * A start with one narrow component sitting on a pile: a K − 1 component start
+ * (of the given kind) built from the other ratings, plus a component at the
+ * pile's value with the pile's share of the data and σ at the variance floor
+ * (5% of the data's SD without a floor).
+ *
+ * None of the ordinary starts can reach such a maximum: their means are spread
+ * over the bulk of the data and their SDs are a sizeable fraction of its spread,
+ * so EM from them never isolates a handful of identical values. Without these
+ * starts the best K = 3 fit to the notebook's ratings is missed entirely.
+ */
+export function pileGmm(
+  data: ArrayLike<number>,
+  K: number,
+  pile: Pile,
+  kind: StartKind,
+  rng: Rng,
+  varianceFloor = 0,
+): Gmm | null {
+  const rest = Array.from(data).filter((v) => v !== pile.value);
+  if (K < 2 || rest.length < K) return null;
+  const base = START_MAKERS[kind](rest, K - 1, rng);
+  const w = pile.count / data.length;
+  const sd = varianceFloor > 0 ? varianceFloor : 0.05 * (std(data) || 1);
+  return {
+    weights: [...base.weights.map((b) => b * (1 - w)), w],
+    means: [...base.means, pile.value],
+    sds: [...base.sds, sd],
+  };
+}
 
 export interface BestFitOptions extends GmmFitOptions {
   /** number of starts, cycling k-means++, Forgy and random (K = 1 needs none) */
   restarts: number;
   seed: number;
+  /**
+   * extra starts for each pile of at least 3 identical values (at most
+   * MAX_PILES piles), each with a narrow component on the pile (see pileGmm);
+   * 0 or absent = none
+   */
+  pileStarts?: number;
 }
 
 export interface BestFit {
   K: number;
   best: GmmFit | null;
-  /** final log-likelihood of every start (NaN when it degenerated) */
-  runs: { ll: number; iterations: number; stopReason: StopReason; init: StartKind }[];
+  /** final log-likelihood of every start (NaN when it degenerated); `pile` marks a pile start */
+  runs: {
+    ll: number;
+    iterations: number;
+    stopReason: StopReason;
+    init: StartKind;
+    pile: number | null;
+  }[];
   degenerate: number;
   /** starts that ended within 0.01 of the best log-likelihood */
   reachedBest: number;
+  /** of those, how many were pile starts */
+  reachedBestFromPiles: number;
+  /** the piles that got their own starts */
+  piles: Pile[];
 }
 
 /** Best of several EM runs for K components (K = 1 is closed form). */
@@ -334,38 +405,61 @@ export function fitGmmBest(data: ArrayLike<number>, K: number, options: BestFitO
     return {
       K,
       best,
-      runs: [{ ll: best.logLikelihood, iterations: 0, stopReason: "converged", init: "kmeans++" }],
+      runs: [
+        {
+          ll: best.logLikelihood,
+          iterations: 0,
+          stopReason: "converged",
+          init: "kmeans++",
+          pile: null,
+        },
+      ],
       degenerate: 0,
       reachedBest: 1,
+      reachedBestFromPiles: 0,
+      piles: [],
     };
   }
   let best: GmmFit | null = null;
   const runs: BestFit["runs"] = [];
-  for (let r = 0; r < options.restarts; r++) {
-    const rng = createRng(restartSeed(options.seed + 7919 * K, r));
-    const kind = START_KINDS[r % START_KINDS.length];
-    const init =
-      kind === "kmeans++"
-        ? kmeansPlusPlusGmm(data, K, rng)
-        : kind === "forgy"
-          ? forgyGmm(data, K, rng)
-          : randomGmm(data, K, rng);
+  const run = (init: Gmm, kind: StartKind, pile: number | null) => {
     const fit = fitGmm(data, init, options);
     runs.push({
       ll: fit.logLikelihood,
       iterations: fit.iterations,
       stopReason: fit.stopReason,
       init: kind,
+      pile,
     });
     if (fit.stopReason !== "degenerate" && (!best || fit.logLikelihood > best.logLikelihood))
       best = fit;
+  };
+  for (let r = 0; r < options.restarts; r++) {
+    const rng = createRng(restartSeed(options.seed + 7919 * K, r));
+    const kind = START_KINDS[r % START_KINDS.length];
+    run(START_MAKERS[kind](data, K, rng), kind, null);
   }
-  const bestLl = best?.logLikelihood ?? Number.NaN;
+  const pileStarts = options.pileStarts ?? 0;
+  const piles = pileStarts > 0 ? findPiles(data).slice(0, MAX_PILES) : [];
+  piles.forEach((pile, p) => {
+    for (let r = 0; r < pileStarts; r++) {
+      // separate seeds, so adding pile starts leaves the ordinary starts unchanged
+      const rng = createRng(restartSeed(options.seed + 7919 * K + 104_729 * (p + 1), r));
+      const kind = START_KINDS[r % START_KINDS.length];
+      const init = pileGmm(data, K, pile, kind, rng, options.varianceFloor);
+      if (init) run(init, kind, pile.value);
+    }
+  });
+  const found = best as GmmFit | null;
+  const bestLl = found?.logLikelihood ?? Number.NaN;
+  const atBest = runs.filter((r) => Math.abs(r.ll - bestLl) < 0.01);
   return {
     K,
-    best: best ? { ...best, params: sortGmm(best.params) } : null,
+    best: found ? { ...found, params: sortGmm(found.params) } : null,
     runs,
     degenerate: runs.filter((r) => r.stopReason === "degenerate").length,
-    reachedBest: runs.filter((r) => Math.abs(r.ll - bestLl) < 0.01).length,
+    reachedBest: atBest.length,
+    reachedBestFromPiles: atBest.filter((r) => r.pile !== null).length,
+    piles,
   };
 }

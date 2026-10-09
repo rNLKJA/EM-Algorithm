@@ -22,6 +22,8 @@ import { fitGmmBest, fitSingleNormal, type BestFitOptions, type Gmm } from "./gm
 export interface ModelChoiceOptions {
   Ks: number[];
   restarts: number;
+  /** extra starts per pile of tied ratings, each with a narrow component on the pile */
+  pileStarts: number;
   seed: number;
   maxIterations: number;
   tolerance: number;
@@ -31,6 +33,7 @@ export interface ModelChoiceOptions {
 export const MODEL_CHOICE_DEFAULTS: ModelChoiceOptions = {
   Ks: [1, 2, 3, 4],
   restarts: 60,
+  pileStarts: 30,
   seed: 4,
   maxIterations: 3000,
   tolerance: 1e-8,
@@ -48,9 +51,14 @@ export interface KRow {
   deltaAic: number;
   deltaBic: number;
   params: Gmm | null;
+  /** starts in total, pile starts included (1 for the closed-form K = 1) */
   restarts: number;
+  /** of those, starts with a narrow component on a pile of tied ratings */
+  pileRuns: number;
   degenerate: number;
   reachedBest: number;
+  reachedBestFromPiles: number;
+  /** the best fit has a component held at the variance floor */
   floorBinding: boolean;
 }
 
@@ -78,9 +86,11 @@ export function compareComponentCounts(
       aic: aic(ll, p),
       bic: bic(ll, p, n),
       params: r.best?.params ?? null,
-      restarts: K === 1 ? 1 : options.restarts,
+      restarts: r.runs.length,
+      pileRuns: r.runs.filter((x) => x.pile !== null).length,
       degenerate: r.degenerate,
       reachedBest: r.reachedBest,
+      reachedBestFromPiles: r.reachedBestFromPiles,
       floorBinding: r.best?.floorBinding ?? false,
     };
   });
@@ -111,6 +121,8 @@ export interface LrtOptions {
   seed: number;
   /** EM starts for each K = 2 fit (observed and every replicate) */
   restarts: number;
+  /** extra starts per pile of tied values (simulated normal data have none) */
+  pileStarts: number;
   maxIterations: number;
   tolerance: number;
   varianceFloor: number;
@@ -120,6 +132,7 @@ export const LRT_DEFAULTS: LrtOptions = {
   B: 500,
   seed: 12,
   restarts: 9,
+  pileStarts: 9,
   maxIterations: 2000,
   tolerance: 1e-7,
   varianceFloor: 0.1,
@@ -158,6 +171,7 @@ export function bootstrapLrt(
   const n = data.length;
   const fitOptions: BestFitOptions = {
     restarts: options.restarts,
+    pileStarts: options.pileStarts,
     seed: options.seed,
     maxIterations: options.maxIterations,
     tolerance: options.tolerance,
@@ -221,6 +235,7 @@ export interface SelectionOptions {
   clip: [number, number] | null;
   Ks: number[];
   restarts: number;
+  pileStarts: number;
   maxIterations: number;
   tolerance: number;
   varianceFloor: number;
@@ -247,6 +262,7 @@ export function selectionFrequency(options: SelectionOptions): SelectionFrequenc
     const choice = compareComponentCounts(ratings, {
       Ks: options.Ks,
       restarts: options.restarts,
+      pileStarts: options.pileStarts,
       seed: restartSeed(options.seed + 17, s),
       maxIterations: options.maxIterations,
       tolerance: options.tolerance,

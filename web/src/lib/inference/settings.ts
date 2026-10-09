@@ -19,6 +19,8 @@ export const INFERENCE_SETTINGS = {
   /** Wald and bootstrap intervals on the same data sets (paired) */
   bootstrapCoverage: { S: 200, B: 200, seed: 7, fit: REFIT },
   modelChoice: MODEL_CHOICE_DEFAULTS,
+  /** the same comparison under other variance floors (sensitivity, DR-003) */
+  modelChoiceFloors: [0.05, 0.25],
   selection: {
     truth: notebookRun.trueParams,
     n: notebookRun.n,
@@ -27,6 +29,7 @@ export const INFERENCE_SETTINGS = {
     clip: null,
     Ks: [1, 2, 3, 4],
     restarts: 12,
+    pileStarts: 6,
     maxIterations: 2000,
     tolerance: 1e-7,
     varianceFloor: 0.1,

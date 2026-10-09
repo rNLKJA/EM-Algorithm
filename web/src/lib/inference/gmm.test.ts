@@ -6,10 +6,12 @@ import { mean, std } from "../stats/descriptive";
 import {
   fitGmm,
   fitGmmBest,
+  findPiles,
   fitSingleNormal,
   forgyGmm,
   gmmLogLikelihood,
   kmeansPlusPlusGmm,
+  pileGmm,
   randomGmm,
   sortGmm,
   toGmm,
@@ -95,5 +97,38 @@ describe("general-K Gaussian mixture", () => {
     );
     expect(r.reachedBest).toBeGreaterThanOrEqual(1);
     expect(r.best!.params.means[0]).toBeLessThan(r.best!.params.means[1]);
+  });
+
+  it("finds piles of tied values and starts a narrow component on them", () => {
+    expect(findPiles(data)).toEqual([{ value: 10, count: 7 }]);
+    expect(findPiles([1, 2, 3, 4.5])).toEqual([]);
+    expect(findPiles([1, 1, 1, 2, 2, 2, 2, 3])).toEqual([
+      { value: 2, count: 4 },
+      { value: 1, count: 3 },
+    ]);
+    const start = pileGmm(data, 3, { value: 10, count: 7 }, "kmeans++", createRng(1), 0.1)!;
+    expect(start.means).toHaveLength(3);
+    expect(start.means[2]).toBe(10);
+    expect(start.sds[2]).toBe(0.1);
+    expect(start.weights[2]).toBeCloseTo(7 / 200, 12);
+    expect(start.weights.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 12);
+    expect(pileGmm(data, 1, { value: 10, count: 7 }, "forgy", createRng(1))).toBeNull();
+  });
+
+  it("pile starts reach the K = 3 maximum the ordinary starts miss", () => {
+    const options = { seed: 4, maxIterations: 3000, tolerance: 1e-8, varianceFloor: 0.1 };
+    // regression (review of the first version): no ordinary start isolates the seven 10.0s
+    const ordinary = fitGmmBest(data, 3, { ...options, restarts: 30 });
+    expect(ordinary.best!.logLikelihood).toBeLessThan(-409);
+    const piles = fitGmmBest(data, 3, { ...options, restarts: 0, pileStarts: 30 });
+    expect(piles.piles).toEqual([{ value: 10, count: 7 }]);
+    expect(piles.best!.logLikelihood).toBeGreaterThanOrEqual(-403.24);
+    expect(piles.best!.floorBinding).toBe(true);
+    expect(piles.best!.params.means[2]).toBeCloseTo(9.96, 2);
+    expect(piles.reachedBestFromPiles).toBe(piles.reachedBest);
+    // adding pile starts leaves the ordinary starts exactly as they were
+    const both = fitGmmBest(data, 3, { ...options, restarts: 30, pileStarts: 3 });
+    expect(both.runs.slice(0, 30).map((r) => r.ll)).toEqual(ordinary.runs.map((r) => r.ll));
+    expect(both.runs.slice(30).every((r) => r.pile === 10)).toBe(true);
   });
 });

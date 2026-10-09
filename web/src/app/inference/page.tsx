@@ -7,12 +7,13 @@ import { ScrollX } from "@/components/common/scroll-x";
 import { BootstrapSection } from "@/components/inference/bootstrap-section";
 import { ConvergenceSection } from "@/components/inference/convergence-section";
 import { CoverageSection } from "@/components/inference/coverage-section";
-import { count, fmt, pct, pctInterval } from "@/components/inference/format";
+import { count, fmt, pct, pctInterval, THETA_ROWS } from "@/components/inference/format";
 import { LrtPlot } from "@/components/inference/lrt-plot";
 import { M, MathBlock } from "@/components/maths/tex";
 import { fit } from "@/lib/em/em";
 import { notebookFinal, notebookRun } from "@/lib/em/notebook-run";
 import type { KRow } from "@/lib/inference/model-choice";
+import { pairedCoverageDifferences } from "@/lib/inference/paired-coverage";
 import { inference } from "@/lib/inference/results";
 import { INFERENCE_SETTINGS } from "@/lib/inference/settings";
 import { toTheta } from "@/lib/inference/uncertainty";
@@ -55,6 +56,12 @@ function Section({
   );
 }
 
+/** "π₁, μ₁ and σ₁" */
+function listSymbols(symbols: string[]): string {
+  if (symbols.length <= 1) return symbols.join("");
+  return `${symbols.slice(0, -1).join(", ")} and ${symbols.at(-1)}`;
+}
+
 function gmmSummary(r: KRow) {
   if (!r.params) return "no fit";
   return r.params.means
@@ -93,10 +100,50 @@ export default function InferencePage() {
     `${pct(Math.min(...rates), 0)} and ${pct(Math.max(...rates), 0)}`;
   const waldRates = a.coverage.model.params.map((p) => p.wald.coverage.estimate);
   const bootRates = a.bootstrapCoverage.params.map((p) => p.bootstrap!.coverage.estimate);
+  // the comparison sentence is built from the paired intervals, so it claims no more than they show
+  const pairedDiffs = pairedCoverageDifferences(a.bootstrapCoverage);
+  const clearlyBetter = THETA_ROWS.filter((_, j) => (pairedDiffs[j]?.interval.lower ?? 0) > 0).map(
+    (r) => r.symbol,
+  );
+  const withinNoise = THETA_ROWS.filter((_, j) => {
+    const d = pairedDiffs[j];
+    return d !== null && d.interval.lower <= 0 && d.interval.upper >= 0;
+  }).map((r) => r.symbol);
+  const wider = a.bootstrapCoverage.params.filter(
+    (p) => p.bootstrap && p.bootstrap.medianWidth > p.wald.medianWidth,
+  ).length;
 
   const full = a.modelChoice.full;
   const trimmed = a.modelChoice.withoutClipped;
-  const k4 = full.rows.find((r) => r.K === 4)?.params;
+  const bicRow = full.rows.find((r) => r.K === full.bestByBic);
+  // the highest-mean component of BIC's choice: the one sitting on the ratings clipped to 10.0
+  const pile = bicRow?.params
+    ? {
+        weight: bicRow.params.weights.at(-1)!,
+        mean: bicRow.params.means.at(-1)!,
+        sd: bicRow.params.sds.at(-1)!,
+      }
+    : null;
+  const pileRow = full.rows.find((r) => r.pileRuns > 0);
+  const pileStarts = pileRow?.pileRuns ?? 0;
+  const ordinaryStarts = s.modelChoice.restarts;
+  const onlyPilesFoundIt = full.rows.filter(
+    (r) => r.pileRuns > 0 && r.reachedBest > 0 && r.reachedBest === r.reachedBestFromPiles,
+  );
+  const floors = [
+    { floor: s.modelChoice.varianceFloor, choice: full },
+    ...a.modelChoice.floorSensitivity.map((m) => ({ floor: m.options.varianceFloor, choice: m })),
+  ].sort((x, y) => x.floor - y.floor);
+  const floorsPicking = (K: number) =>
+    floors.filter((f) => f.choice.bestByBic === K).map((f) => `${f.floor}`);
+  const otherFloors = floors.filter((f) => f.choice.bestByBic !== full.bestByBic);
+  const closeCall = (m: (typeof floors)[number]["choice"]) => {
+    const spread = m.rows
+      .map((r) => r.deltaBic)
+      .filter((d) => d < 2)
+      .sort((x, y) => x - y);
+    return { within: spread.length, max: Math.max(...spread) };
+  };
   const lrt = a.lrt;
   const naive = wilsonInterval(lrt.naiveRejections, lrt.options.B);
   const ic = a.initComparison;
@@ -199,9 +246,24 @@ export default function InferencePage() {
             <p>
               <strong>Neither reaches 95%.</strong> Wald intervals covered between{" "}
               {covRange(waldRates)} of the time; percentile-bootstrap intervals between{" "}
-              {covRange(bootRates)}, consistently better on the same data sets. At n = 200 with
-              groups this close, the log-likelihood is not yet the parabola the Wald interval
-              assumes. Clipping, perhaps surprisingly, changes little.
+              {covRange(bootRates)}.
+              {clearlyBetter.length ? (
+                <>
+                  {" "}
+                  On the same data sets the bootstrap covered more often for{" "}
+                  {listSymbols(clearlyBetter)} (paired 95% intervals exclude 0)
+                  {withinNoise.length ? (
+                    <>; for {listSymbols(withinNoise)} the difference is within simulation noise</>
+                  ) : null}
+                  .
+                </>
+              ) : (
+                <> On the same data sets no difference is distinguishable from simulation noise.</>
+              )}{" "}
+              Part of the gain comes from width: the bootstrap intervals are wider for {wider} of
+              the 5 parameters (median widths in the table). At n = 200 with groups this close, the
+              log-likelihood is not yet the parabola the Wald interval assumes. Clipping, perhaps
+              surprisingly, changes little.
             </p>
           </div>
           <CoverageSection published={a.coverage} bootstrapCoverage={a.bootstrapCoverage} />
@@ -210,24 +272,69 @@ export default function InferencePage() {
         <Section id="choosing-k" index={3} title="How many groups do the data support?">
           <div className="prose-notebook">
             <p>
-              The notebook assumed two groups. Fitting K = 1 to 4 components (best of{" "}
-              {s.modelChoice.restarts} starts each, variance floor σ ≥ {s.modelChoice.varianceFloor}
-              , <Link href="/methods#dr-003">DR-003</Link>) and scoring each with AIC and BIC gives
-              an uncomfortable answer: <strong>both criteria prefer four components</strong>.
-              {k4 ? (
+              The notebook assumed two groups. Fitting K = 1 to 4 components (variance floor σ ≥{" "}
+              {s.modelChoice.varianceFloor}, <Link href="/methods#dr-003">DR-003</Link>) and scoring
+              each with AIC and BIC gives an uncomfortable answer:{" "}
+              <strong>
+                BIC prefers {full.bestByBic} components and AIC {full.bestByAic}
+              </strong>
+              {full.bestByBic !== 2 && full.bestByAic !== 2 ? ", and neither picks two" : ""}.
+              {pile && bicRow ? (
                 <>
                   {" "}
-                  The fourth is small and narrow: {fmt(100 * k4.weights[3], 1)}% of the ratings at μ
-                  = {fmt(k4.means[3], 2)} with σ = {fmt(k4.sds[3], 2)}. That is the pile of{" "}
+                  BIC&apos;s extra component is small and narrow: {fmt(100 * pile.weight, 1)}% of
+                  the ratings at μ = {fmt(pile.mean, 2)} with σ = {fmt(pile.sd, 2)}
+                  {bicRow.floorBinding ? ", held at the floor" : ""}. That is the pile of{" "}
                   {a.modelChoice.dropped} ratings the notebook&apos;s clipping put at exactly 10.0,
-                  not a third kind of viewer.
+                  not another kind of viewer.
                 </>
               ) : null}
             </p>
+            <p>
+              Each K gets the best of {ordinaryStarts} ordinary starts (k-means++, Forgy and random)
+              and {pileStarts} <em>pile starts</em>, which put a narrow component on the{" "}
+              {a.modelChoice.dropped} tied ratings at 10.0. The pile starts matter: ordinary starts
+              spread their means over the bulk of the ratings with wide spreads, so none of them
+              isolates seven identical values.
+              {onlyPilesFoundIt.length ? (
+                <>
+                  {" "}
+                  For K = {onlyPilesFoundIt.map((r) => r.K).join(" and ")} only pile starts reached
+                  the best fit
+                  {onlyPilesFoundIt.length === 1
+                    ? ` (${onlyPilesFoundIt[0].reachedBestFromPiles} of ${onlyPilesFoundIt[0].pileRuns})`
+                    : ""}
+                  ; without them the table would report lower maxima for those K.
+                </>
+              ) : null}
+            </p>
+            {otherFloors.length ? (
+              <p>
+                The choice also depends on the floor. BIC picks K = {full.bestByBic} at σ ≥{" "}
+                {listSymbols(floorsPicking(full.bestByBic))}
+                {otherFloors.map((f) => {
+                  const c = closeCall(f.choice);
+                  return (
+                    <span key={f.floor}>
+                      , but K = {f.choice.bestByBic} at σ ≥ {f.floor}
+                      {c.within > 1
+                        ? `, where ${c.within} values of K are within ${fmt(c.max, 1)} BIC points of each other`
+                        : ""}
+                    </span>
+                  );
+                })}
+                . A narrow component on tied values gains likelihood as its σ shrinks, so the floor
+                sets how much the pile is worth (
+                <Link className="link" href="/methods#dr-003">
+                  DR-003
+                </Link>
+                ).
+              </p>
+            ) : null}
           </div>
 
           <ScrollX label="Model comparison for K = 1 to 4" className="sheet p-1">
-            <table className="w-full min-w-[44rem] text-sm">
+            <table className="w-full min-w-[50rem] text-sm">
               <caption className="sr-only">
                 Log-likelihood, AIC and BIC for one to four components, on all 200 ratings and
                 without the clipped ones
@@ -251,6 +358,9 @@ export default function InferencePage() {
                   </th>
                   <th scope="col" className="px-2 py-2.5 font-normal">
                     starts at best
+                  </th>
+                  <th scope="col" className="px-2 py-2.5 font-normal">
+                    σ at floor
                   </th>
                   <th scope="col" className="px-2 py-2.5 font-normal">
                     components (weight at mean)
@@ -288,7 +398,13 @@ export default function InferencePage() {
                     </td>
                     <td className="px-2 py-2.5">
                       {r.reachedBest}/{r.restarts}
+                      {r.pileRuns > 0 ? (
+                        <span className="block text-[0.7rem] text-muted-foreground">
+                          {r.reachedBestFromPiles} from pile starts
+                        </span>
+                      ) : null}
                     </td>
+                    <td className="px-2 py-2.5 font-sans">{r.floorBinding ? "yes" : "no"}</td>
                     <td className="px-2 py-2.5 font-sans text-xs text-muted-foreground">
                       {gmmSummary(r)}
                     </td>
@@ -308,10 +424,12 @@ export default function InferencePage() {
           </ScrollX>
           <p className="text-xs text-muted-foreground">
             Δ is the criterion minus the smallest in its column (0 marks the choice). &ldquo;Starts
-            at best&rdquo; counts the starts that ended within 0.01 of the best log-likelihood; for
-            K = 2 and 3 only a few of {s.modelChoice.restarts} found it, which is itself a warning
-            about multimodal likelihoods. Without the clipped ratings BIC picks K ={" "}
-            {trimmed.bestByBic} (AIC still picks {trimmed.bestByAic}).
+            at best&rdquo; counts the starts that ended within 0.01 of the best log-likelihood, out
+            of {ordinaryStarts} ordinary starts plus {pileStarts} pile starts; that so few find it
+            is itself a warning about multimodal likelihoods. &ldquo;σ at floor&rdquo; marks a best
+            fit with a component held at σ = {s.modelChoice.varianceFloor}. Without the clipped
+            ratings there is no pile, and BIC picks K = {trimmed.bestByBic} (AIC still picks{" "}
+            {trimmed.bestByAic}).
           </p>
 
           <div className="grid gap-5 lg:grid-cols-[1fr_1.15fr]">
@@ -320,9 +438,11 @@ export default function InferencePage() {
               <p className="mt-3">
                 The notebook&apos;s data are one draw. Drawing {a.selection.model.options.S} fresh
                 samples of 200 from the same recipe ({a.selection.model.options.restarts} starts per
-                K) shows how the criteria behave in general. BIC almost always picks two components,
-                with or without clipping; AIC overfits, and clipping makes it worse. So K = 4 on the
-                notebook&apos;s sample is a property of this particular draw, not of the recipe.
+                K, plus {a.selection.model.options.pileStarts} pile starts wherever clipping piled
+                three or more ratings onto one value) shows how the criteria behave in general. BIC
+                almost always picks two components, with or without clipping; AIC overfits, and
+                clipping makes it worse. So BIC&apos;s K = {full.bestByBic} on the notebook&apos;s
+                sample is a property of this particular draw, not of the recipe.
               </p>
             </div>
             <ScrollX label="How often each criterion picks each K" className="sheet p-1">
@@ -399,7 +519,7 @@ export default function InferencePage() {
                   distribution.
                 </p>
               </div>
-              <div className="sheet space-y-3 p-4 sm:p-5">
+              <div className="sheet space-y-3 p-4 sm:p-5 lg:self-start">
                 <LrtPlot
                   histogram={lrt.nullHistogram}
                   total={lrt.nullStatistics.length}
@@ -483,7 +603,7 @@ export default function InferencePage() {
               </Link>
               ).
               {other && other.logLikelihood > lrt.ll2 + 0.01
-                ? ` The ${lrt.options.restarts} starts on the observed data found ℓ₂ = ${fmt(lrt.ll2, 2)}, not the higher maximum at ${fmt(other.logLikelihood, 2)}, so the observed statistic, if anything, understates the evidence.`
+                ? ` The ${lrt.options.restarts} starts on the observed data (plus ${lrt.options.pileStarts} pile starts) found ℓ₂ = ${fmt(lrt.ll2, 2)}, not the higher maximum at ${fmt(other.logLikelihood, 2)}, so the observed statistic, if anything, understates the evidence.`
                 : null}
             </p>
           </div>

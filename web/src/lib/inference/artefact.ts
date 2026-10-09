@@ -60,7 +60,13 @@ export interface InferenceArtefact {
   bootstrap: BootstrapSummary;
   coverage: { model: CoverageResult; clipped: CoverageResult };
   bootstrapCoverage: CoverageResult;
-  modelChoice: { full: ModelChoice; withoutClipped: ModelChoice; dropped: number };
+  modelChoice: {
+    full: ModelChoice;
+    withoutClipped: ModelChoice;
+    dropped: number;
+    /** the full-data comparison under other variance floors */
+    floorSensitivity: ModelChoice[];
+  };
   selection: { model: SelectionFrequency; clipped: SelectionFrequency };
   lrt: LrtResult & { nullHistogram: Histogram };
   convergence: ConvergenceSummary;
@@ -145,6 +151,11 @@ export function buildInferenceArtefact(log: (message: string) => void = () => {}
     full: timed("model choice", () => compareComponentCounts(data, INFERENCE_SETTINGS.modelChoice)),
     withoutClipped: compareComponentCounts(trimmed, INFERENCE_SETTINGS.modelChoice),
     dropped: data.length - trimmed.length,
+    floorSensitivity: timed("model choice, other floors", () =>
+      INFERENCE_SETTINGS.modelChoiceFloors.map((varianceFloor) =>
+        compareComponentCounts(data, { ...INFERENCE_SETTINGS.modelChoice, varianceFloor }),
+      ),
+    ),
   };
   const S = INFERENCE_SETTINGS.selection.S;
   const selection = {

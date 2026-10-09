@@ -3,29 +3,12 @@
 import { useMemo } from "react";
 import { ScrollX } from "@/components/common/scroll-x";
 import type { WaldCoverage } from "@/lib/inference/tasks";
-import type { CoverageResult, PairedCoverage } from "@/lib/inference/uncertainty";
-import { pairedMeanDifference } from "@/lib/stats/paired";
+import { pairedCoverageDifferences } from "@/lib/inference/paired-coverage";
+import type { CoverageResult } from "@/lib/inference/uncertainty";
 import { CoveragePlot, SeriesKey, type CoverageSeries } from "./coverage-plot";
 import { count, fmt, pct, THETA_ROWS } from "./format";
 import { RerunBar } from "./rerun-bar";
 import { useRerun } from "./use-rerun";
-
-/** Bootstrap minus Wald coverage on the same data sets, with a paired bootstrap interval. */
-function pairedDifference(t: PairedCoverage, seed: number) {
-  const wald: number[] = [];
-  const boot: number[] = [];
-  const push = (w: number, b: number, k: number) => {
-    for (let i = 0; i < k; i++) {
-      wald.push(w);
-      boot.push(b);
-    }
-  };
-  push(1, 1, t.both);
-  push(1, 0, t.waldOnly);
-  push(0, 1, t.bootOnly);
-  push(0, 0, t.neither);
-  return pairedMeanDifference(boot, wald, { seed, B: 4000 });
-}
 
 export function CoverageSection({
   published,
@@ -37,10 +20,7 @@ export function CoverageSection({
   const rerun = useRerun("coverage", published.model.S, published, published.model.seed);
   const { model, clipped } = rerun.result;
   const bc = bootstrapCoverage;
-  const paired = useMemo(
-    () => bc.params.map((p, j) => (p.paired ? pairedDifference(p.paired, 100 + j) : null)),
-    [bc],
-  );
+  const paired = useMemo(() => pairedCoverageDifferences(bc), [bc]);
 
   const series: CoverageSeries[] = [
     {
