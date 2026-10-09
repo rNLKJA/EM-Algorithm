@@ -5,7 +5,8 @@
  * line for line; the parity suite (em.parity.test.ts) replays the notebook's
  * exported trace and checks every iteration to 1e-6. Two additions are opt-in
  * and off by default: a variance floor (for the collapse demo) and an early stop
- * when the parameters stop being finite (the notebook would keep printing nan).
+ * when a component collapses (sigma below SIGMA_EPS, or non-finite parameters).
+ * The notebook would keep going there, printing nan or a frozen spike.
  */
 import { normalPdf } from "./gaussian";
 import type {
@@ -113,7 +114,17 @@ export function exactLogLikelihood(data: Data, params: MixtureParams): number {
   return total;
 }
 
-export function isFiniteParams(p: MixtureParams): boolean {
+/**
+ * A standard deviation below this is a collapsed component, not a fit. Collapse
+ * often stops short of exactly 0: sigma can freeze at floating-point residue
+ * (about 1.8e-15 around a value of 10), where |Δℓ| is 0 and a naive loop would
+ * report "converged" on the unbounded spike. The notebook's own sigmas never go
+ * below about 0.6, so this guard does not touch its run.
+ */
+export const SIGMA_EPS = 1e-8;
+
+/** True while every parameter is finite and neither component has collapsed. */
+export function isNonDegenerate(p: MixtureParams): boolean {
   return (
     Number.isFinite(p.pi1) &&
     Number.isFinite(p.pi2) &&
@@ -121,8 +132,8 @@ export function isFiniteParams(p: MixtureParams): boolean {
     Number.isFinite(p.mu2) &&
     Number.isFinite(p.sigma1) &&
     Number.isFinite(p.sigma2) &&
-    p.sigma1 > 0 &&
-    p.sigma2 > 0
+    p.sigma1 > SIGMA_EPS &&
+    p.sigma2 > SIGMA_EPS
   );
 }
 
@@ -166,7 +177,7 @@ export function fit(data: Data, init: MixtureParams, options: FitOptions): FitRe
     });
     params = next;
 
-    if (!isFiniteParams(next) || !Number.isFinite(ll)) {
+    if (!isNonDegenerate(next) || !Number.isFinite(ll)) {
       stopReason = "degenerate";
       break;
     }

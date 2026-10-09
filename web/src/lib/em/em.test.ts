@@ -5,6 +5,8 @@ import {
   exactLogLikelihood,
   fit,
   isNonDecreasing,
+  isNonDegenerate,
+  SIGMA_EPS,
   logLikelihood,
   mStep,
   paramsAt,
@@ -110,16 +112,50 @@ describe("variance collapse", () => {
   const data = notebookRun.ratings;
   const init = collapseInit(data, 10, 0.2);
 
-  it("a component sitting on the seven ratings clipped to 10 collapses to sigma = 0", () => {
+  it("a component sitting on the seven ratings clipped to 10 collapses (sigma -> 0)", () => {
     expect(data.filter((x) => x === 10)).toHaveLength(7);
     const result = fit(data, init, { maxIterations: 200, tolerance: 1e-10 });
     expect(result.stopReason).toBe("degenerate");
-    const sigmas = result.iterations.map((it) => it.params.sigma2);
-    expect(sigmas.at(-1)).toBe(0);
+    const last = result.iterations.at(-1)!;
+    expect(last.params.sigma2).toBeLessThan(SIGMA_EPS);
+    expect(last.params.mu2).toBeCloseTo(10, 12);
+    expect(isNonDegenerate(last.params)).toBe(false);
     // the likelihood climbs while the spike narrows: EM is doing its job on an unbounded objective
-    const lls = result.iterations.slice(0, -1).map((it) => it.logLikelihood);
+    const lls = result.iterations.map((it) => it.logLikelihood).filter(Number.isFinite);
     expect(isNonDecreasing(lls)).toBe(true);
-    expect(Number.isNaN(result.iterations.at(-1)!.logLikelihood)).toBe(true);
+    // already above the best ordinary fit (ℓ = -415.37) before it breaks down
+    expect(lls.at(-1)!).toBeGreaterThan(-415);
+  });
+
+  it("treats sigma frozen at floating-point residue as collapsed, not converged", () => {
+    // From sigma = 0.06 the spike freezes at sigma ~ 1.8e-15, mu = 9.999999999999998:
+    // |Δℓ| is then exactly 0, so without the SIGMA_EPS guard fit() reported "converged"
+    // at ℓ = -203.35, the unbounded-likelihood spike.
+    const result = fit(data, collapseInit(data, 10, 0.06), {
+      maxIterations: 300,
+      tolerance: 1e-10,
+    });
+    expect(result.stopReason).toBe("degenerate");
+    const last = result.iterations.at(-1)!.params;
+    expect(last.sigma2).toBeGreaterThan(0);
+    expect(last.sigma2).toBeLessThan(SIGMA_EPS);
+  });
+
+  it("every small starting spread on the tens collapses; wider ones escape to a real optimum", () => {
+    for (let s = 5; s <= 60; s++) {
+      const result = fit(data, collapseInit(data, 10, s / 100), {
+        maxIterations: 300,
+        tolerance: 1e-10,
+      });
+      const last = result.iterations.at(-1)!;
+      if (result.stopReason === "degenerate") {
+        expect(last.params.sigma2 < SIGMA_EPS || !Number.isFinite(last.logLikelihood)).toBe(true);
+      } else {
+        expect(result.stopReason).toBe("converged");
+        expect(last.params.sigma2).toBeGreaterThan(0.1);
+      }
+      expect(result.stopReason).toBe(s <= 53 ? "degenerate" : "converged");
+    }
   });
 
   it("a variance floor keeps the run finite but the spike remains", () => {

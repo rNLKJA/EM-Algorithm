@@ -1,19 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { LineChart } from "@/components/charts/line-chart";
 import { MixtureChart } from "@/components/charts/mixture-chart";
+import { Ell } from "@/components/common/ell";
 import { Legend } from "@/components/common/legend";
 import { ParamSlider } from "@/components/common/param-slider";
 import { Segmented } from "@/components/common/segmented";
 import { Switch } from "@/components/ui/switch";
 import { collapseInit } from "@/lib/em/collapse";
-import { fit, isFiniteParams } from "@/lib/em/em";
+import { fit, isNonDegenerate } from "@/lib/em/em";
 import { notebookRun } from "@/lib/em/notebook-run";
-import { minus, sci } from "@/lib/format";
+import { minus, sci, smart } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const DATA = notebookRun.ratings;
+/** ℓ where the notebook's start converges (90 iterations; see claims.test.ts). */
+const CONVERGED_LL = -415.37;
 const SORTED = [...DATA].sort((a, b) => a - b);
 
 const TARGETS = {
@@ -42,33 +45,104 @@ export function CollapseDemo() {
 
   const sigmas = [init.sigma2, ...result.iterations.map((it) => it.params.sigma2)];
   const lls = result.iterations.map((it) => it.logLikelihood);
-  const lastFinite = [...result.iterations].reverse().find((it) => isFiniteParams(it.params));
-  const shown = lastFinite?.params ?? init;
+  const collapsed = result.stopReason === "degenerate";
+  const lastHealthy = [...result.iterations].reverse().find((it) => isNonDegenerate(it.params));
+  const shown = lastHealthy?.params ?? init;
+  const shownIteration = lastHealthy ? result.iterations.indexOf(lastHealthy) + 1 : 0;
   const n = result.iterations.length;
   const last = result.iterations[n - 1];
   const tied = DATA.filter((x) => x === 10).length;
+  const ll = (v: number) => (
+    <>
+      <Ell /> = <span className="num">{minus(v.toFixed(2))}</span>
+    </>
+  );
 
-  let verdict: { tone: "bad" | "warn" | "ok"; text: string };
-  if (result.stopReason === "degenerate") {
-    const peak = lls.slice(0, -1).filter(Number.isFinite).at(-1);
+  let verdict: { tone: "bad" | "warn" | "ok"; text: ReactNode };
+  if (collapsed) {
+    const s2 = last.params.sigma2;
+    const exactZero = !(s2 > 0) || !Number.isFinite(last.logLikelihood);
+    const peak = lls.filter(Number.isFinite).at(-1);
+    // compare with where the notebook's own run converges (pinned in claims.test.ts)
+    const versus =
+      peak !== undefined && peak > CONVERGED_LL ? (
+        <>
+          , already above the notebook&apos;s converged fit (
+          <span className="num">{minus(CONVERGED_LL.toFixed(2))}</span>)
+        </>
+      ) : null;
     verdict = {
       tone: "bad",
-      text: `Collapsed at iteration ${n}: σ₂ reached exactly 0, so the next density is 0/0 and the log-likelihood is NaN. Just before, it had climbed to ${minus(peak?.toFixed(1) ?? "")}, higher than any sensible fit (−415.37). The likelihood has no maximum here: it grows without bound as σ₂ → 0.`,
+      text: exactZero ? (
+        <>
+          Collapsed at iteration {n}: σ₂ reached exactly 0, so the density is 0/0 and the
+          log-likelihood is NaN.{" "}
+          {peak !== undefined && (
+            <>
+              Just before, it had reached {ll(peak)}
+              {versus}.{" "}
+            </>
+          )}
+          The likelihood has no maximum here: it grows without bound as σ₂ → 0.
+        </>
+      ) : (
+        <>
+          Collapsed at iteration {n}: σ₂ shrank to <span className="num">{sci(s2, 1)}</span>, a
+          spike at <span className="num">{last.params.mu2.toFixed(2)}</span> so narrow that floating
+          point can barely represent it. The log-likelihood reads {ll(last.logLikelihood)}
+          {versus}, and it would keep growing as σ₂ → 0: there is no maximum here. Left running, the
+          loop either hits σ₂ = 0 (0/0, NaN) or freezes on the spike with |Δ
+          <Ell />| = 0 and calls it &ldquo;converged&rdquo;; this site stops once σ drops below{" "}
+          <span className="num">10⁻⁸</span>.
+        </>
+      ),
     };
   } else if (floorOn && last.params.sigma2 <= floor + 1e-12) {
+    const outcome =
+      result.stopReason === "converged" ? (
+        <>the run converged after {n} iterations</>
+      ) : (
+        <>
+          the run stopped at the {n}-iteration cap, still moving by{" "}
+          <span className="num">{sci(Math.abs(last.improvement ?? 0), 1)}</span> per step
+        </>
+      );
     verdict = {
       tone: "warn",
-      text: `The floor held: σ₂ is pinned at ${floor.toFixed(2)} and the run converged after ${n} iterations (ℓ = ${minus(last.logLikelihood.toFixed(2))}). But component 2 is still a spike on ${(last.params.pi2 * DATA.length).toFixed(1)} ratings' worth of weight. A floor stops the crash; it does not rescue the fit. A different start does.`,
+      text: (
+        <>
+          The floor held: σ₂ is pinned at <span className="num">{floor.toFixed(2)}</span> and{" "}
+          {outcome} ({ll(last.logLikelihood)}). But component 2 is still a spike on{" "}
+          {(last.params.pi2 * DATA.length).toFixed(1)} ratings&apos; worth of weight. A floor stops
+          the crash; it does not rescue the fit. A different start does.
+        </>
+      ),
     };
   } else if (last.params.sigma2 < 0.1) {
     verdict = {
       tone: "warn",
-      text: `No crash, but no recovery either: EM settled on a narrow spike (σ₂ = ${last.params.sigma2.toFixed(3)}) around ${last.params.mu2.toFixed(2)} with ℓ = ${minus(last.logLikelihood.toFixed(2))}, a spurious local maximum.`,
+      text: (
+        <>
+          No crash, but no recovery either: EM{" "}
+          {result.stopReason === "converged" ? "settled" : "is sitting"} on a narrow spike (σ₂ ={" "}
+          <span className="num">{smart(last.params.sigma2, 3)}</span>) around{" "}
+          {last.params.mu2.toFixed(2)} with {ll(last.logLikelihood)}, a spurious local maximum.
+        </>
+      ),
     };
   } else {
     verdict = {
       tone: "ok",
-      text: `Escaped: neighbouring ratings pulled σ₂ back up to ${last.params.sigma2.toFixed(2)} and EM converged to an ordinary fit (ℓ = ${minus(last.logLikelihood.toFixed(2))}).`,
+      text: (
+        <>
+          Escaped: neighbouring ratings pulled σ₂ back up to{" "}
+          <span className="num">{last.params.sigma2.toFixed(2)}</span> and EM{" "}
+          {result.stopReason === "converged"
+            ? "converged to an ordinary fit"
+            : `reached an ordinary fit by the ${n}-iteration cap`}{" "}
+          ({ll(last.logLikelihood)}).
+        </>
+      ),
     };
   }
 
@@ -164,7 +238,9 @@ export function CollapseDemo() {
       <div className="sheet p-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold">
-            Last finite fit (iteration {lastFinite ? result.iterations.indexOf(lastFinite) + 1 : 0})
+            {collapsed
+              ? `Last fit before the collapse (iteration ${shownIteration})`
+              : `Final fit (iteration ${shownIteration})`}
           </h3>
           <Legend />
         </div>
@@ -174,7 +250,7 @@ export function CollapseDemo() {
           height={260}
           yMax={0.45}
           annotate={false}
-          ariaLabel={`Mixture at the last finite iteration: component 2 at ${shown.mu2.toFixed(2)} with spread ${shown.sigma2.toPrecision(2)}.`}
+          ariaLabel={`Mixture at iteration ${shownIteration}: component 2 at ${shown.mu2.toFixed(2)} with spread ${shown.sigma2.toPrecision(2)}.`}
         />
       </div>
     </div>
