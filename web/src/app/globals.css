@@ -1,0 +1,268 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design tokens: "chalkboard meets notebook".
+ * Light = warm squared paper and slate ink; dark = a deep slate blackboard and chalk.
+ * The two mixture components are teal (component 1) and coral (component 2), chosen
+ * to stay distinct under the common colour-vision deficiencies, and always paired
+ * with a second cue: circle vs triangle markers and solid vs dashed curves.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-plex-sans), var(--font-plex-greek), ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    var(--font-plex-mono), var(--font-plex-greek), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: var(--font-fraunces), var(--font-plex-greek);
+  --font-display: var(--font-fraunces), var(--font-plex-greek);
+  --font-hand: var(--font-caveat), var(--font-plex-greek), cursive;
+
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-comp-1: var(--comp-1);
+  --color-comp-2: var(--comp-2);
+  --color-comp-1-ink: var(--comp-1-ink);
+  --color-comp-2-ink: var(--comp-2-ink);
+  --color-correction: var(--correction);
+  --color-correction-bg: var(--correction-bg);
+  --color-ok: var(--ok);
+  --color-rule: var(--rule);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --radius: 0.75rem;
+
+  --paper: #f6f1e7;
+  --ink: #1d2a30;
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #fbf8f1;
+  --card-foreground: var(--ink);
+  --popover: #fbf8f1;
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: #f8f4ec;
+  --secondary: #ebe3d3;
+  --secondary-foreground: var(--ink);
+  --muted: #ebe3d3;
+  --muted-foreground: #56636b;
+  --accent: #e7dfcd;
+  --accent-foreground: var(--ink);
+  --destructive: #b42318;
+  --border: #dacfbc;
+  --input: #cfc3ad;
+  --ring: #0f7f7a;
+  --rule: #e9c7bd;
+
+  --comp-1: #0f7f7a;
+  --comp-1-ink: #0b6a66;
+  --comp-2: #d65a3c;
+  --comp-2-ink: #ad3f25;
+  --correction: #8a5a00;
+  --correction-bg: #f7e6b4;
+  --ok: #256830;
+
+  --grid: rgb(29 42 48 / 0.05);
+  --chart-1: var(--comp-1);
+  --chart-2: var(--comp-2);
+  --chart-3: #7a6a4f;
+  --chart-4: #56636b;
+  --chart-5: var(--ink);
+}
+
+.dark {
+  --paper: #172124;
+  --ink: #e9e5d9;
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #1e2a2e;
+  --card-foreground: var(--ink);
+  --popover: #1e2a2e;
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: #172124;
+  --secondary: #26343a;
+  --secondary-foreground: var(--ink);
+  --muted: #26343a;
+  --muted-foreground: #a5b3b2;
+  --accent: #2c3b41;
+  --accent-foreground: var(--ink);
+  --destructive: #ff8a7a;
+  --border: rgb(233 229 217 / 0.14);
+  --input: rgb(233 229 217 / 0.22);
+  --ring: #63d0c5;
+  --rule: rgb(255 143 112 / 0.28);
+
+  --comp-1: #5fcbbf;
+  --comp-1-ink: #7fdad0;
+  --comp-2: #ff8f6e;
+  --comp-2-ink: #ffa98e;
+  --correction: #f3d27c;
+  --correction-bg: rgb(243 210 124 / 0.12);
+  --ok: #8fd19a;
+
+  --grid: rgb(233 229 217 / 0.035);
+  --chart-3: #c9b98f;
+  --chart-4: #a5b3b2;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-position: -1px -1px;
+    font-feature-settings: "ss02" on;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading tracking-tight text-balance;
+    font-optical-sizing: auto;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--comp-1) 28%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  /* grid items may shrink below their content (wide maths/tables scroll inside) */
+  .grid > * {
+    min-width: 0;
+  }
+  .katex {
+    font-size: 1.08em;
+  }
+  .katex-display {
+    margin: 0.75rem 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.25rem 0;
+  }
+  /* inside a ScrollX wrapper the wrapper scrolls (and can take focus), not KaTeX's own box */
+  .scroll-x > div > .katex-display {
+    overflow: visible;
+  }
+  @media (max-width: 640px) {
+    .katex-display > .katex {
+      font-size: clamp(0.72em, 3.5vw, 0.95em);
+    }
+  }
+}
+
+@layer components {
+  /* sideways scroll box (components/common/scroll-x.tsx): fade the edge hiding more */
+  .scroll-x {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+  .scroll-x[data-fade-end] {
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  }
+  .scroll-x[data-fade-start] {
+    mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent);
+  }
+  .scroll-x[data-fade-start][data-fade-end] {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 2.5rem,
+      #000 calc(100% - 2.5rem),
+      transparent
+    );
+  }
+  /* a mask would clip the focus ring, so drop it (and draw the ring inside) while focused */
+  .scroll-x:focus-visible {
+    mask-image: none;
+    outline-offset: -2px;
+  }
+  /* a sheet of paper (or a slab of blackboard) for panels and charts */
+  .sheet {
+    @apply rounded-2xl border bg-card text-card-foreground shadow-[0_1px_0_rgb(0_0_0/0.03),0_8px_24px_-12px_rgb(29_42_48/0.18)] dark:shadow-[0_1px_0_rgb(255_255_255/0.03),0_10px_30px_-14px_rgb(0_0_0/0.6)];
+  }
+  /* monospace numbers that line up in columns */
+  .num {
+    @apply font-mono tabular-nums;
+    font-variant-ligatures: none;
+  }
+  /* Caveat "chalk" annotations, used sparingly */
+  .hand {
+    font-family: var(--font-caveat), var(--font-plex-greek), cursive;
+    @apply leading-none;
+  }
+  /* ℓ from KaTeX's main font (loaded with katex.min.css); see components/common/ell.tsx */
+  .ell {
+    font-family: KaTeX_Main, "Cambria Math", "STIX Two Math", "Times New Roman", serif;
+    font-style: normal;
+    font-weight: 400;
+  }
+  .eyebrow {
+    @apply font-mono text-[0.72rem] font-medium tracking-[0.14em] text-muted-foreground uppercase;
+  }
+  .prose-notebook {
+    @apply max-w-[68ch] text-[1.02rem] leading-relaxed text-foreground/90;
+  }
+  .prose-notebook p + p {
+    @apply mt-4;
+  }
+  .prose-notebook a {
+    @apply underline decoration-comp-1/50 underline-offset-[3px] hover:decoration-comp-1;
+  }
+  .link {
+    @apply font-medium underline decoration-comp-1/50 underline-offset-[3px] transition-colors hover:decoration-comp-1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
