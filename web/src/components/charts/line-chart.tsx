@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useElementWidth } from "@/hooks/use-element-width";
+import { formatLinearTicks, formatLogTick, logTicks } from "@/lib/charts/axes";
 import { linePath, linearScale, niceTicks } from "@/lib/charts/scale";
 import { cn } from "@/lib/utils";
 
@@ -86,13 +87,13 @@ export function LineChart({
 
   const x = linearScale([xStart, xMax], [M.left, M.left + innerW]);
   const y = linearScale([yLo, yHi], [M.top + innerH, M.top]);
-  const yTicks = logY
-    ? niceTicks(Math.ceil(yLo), Math.floor(yHi), 4).filter((t) => Number.isInteger(t))
-    : niceTicks(yLo, yHi, 4);
+  const yTicks = logY ? logTicks(yLo, yHi, 4) : niceTicks(yLo, yHi, 4);
   const xTicks = niceTicks(xStart, xMax, width < 480 ? 4 : 8).filter(
     (t) => Number.isInteger(t) && t >= xStart && t <= xMax,
   );
-  const fmt = yFormat ?? ((v: number) => (logY ? `1e${v}` : String(Number(v.toFixed(2)))));
+  const linearLabels = logY || yFormat ? null : formatLinearTicks(yTicks);
+  const fmt = (v: number, i: number) =>
+    yFormat ? yFormat(v) : logY ? formatLogTick(v) : linearLabels![i];
 
   return (
     <div ref={ref} className={cn("w-full", className)}>
@@ -104,7 +105,7 @@ export function LineChart({
         aria-label={ariaLabel}
         className="block max-w-full overflow-visible"
       >
-        {yTicks.map((t) => (
+        {yTicks.map((t, i) => (
           <g key={t} aria-hidden>
             <line
               x1={M.left}
@@ -121,7 +122,7 @@ export function LineChart({
               textAnchor="end"
               className="fill-muted-foreground font-mono text-[10px]"
             >
-              {fmt(t)}
+              {fmt(t, i)}
             </text>
           </g>
         ))}

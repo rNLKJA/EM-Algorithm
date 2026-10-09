@@ -12,8 +12,10 @@ import { PlaybackControls } from "@/components/common/playback-controls";
 import { Segmented } from "@/components/common/segmented";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { useMoreBelow } from "@/hooks/use-more-below";
 import { usePlayback } from "@/hooks/use-playback";
 import { useTweenedParams } from "@/hooks/use-tweened-params";
+import { ratingAxis } from "@/lib/charts/axes";
 import { diagnoseFit } from "@/lib/em/diagnose";
 import { isNonDecreasing, logLikelihood, paramsAt } from "@/lib/em/em";
 import { pyFixed, sci } from "@/lib/format";
@@ -35,6 +37,7 @@ export function Playground() {
   const [speed, setSpeed] = useState<Speed>("1");
   const [showTruth, setShowTruth] = useState(true);
   const model = usePlaygroundModel(config);
+  const [settingsRef, settingsMoreBelow] = useMoreBelow<HTMLElement>();
   const { dataset, init, result } = model;
 
   const stageCount = result ? result.iterations.length + 1 : 1;
@@ -72,6 +75,10 @@ export function Playground() {
     );
     return Math.max(0.2, peak * 1.6);
   }, [dataset.truth]);
+
+  // unclipped data can spill past 1 to 10: widen the axis so every rating is counted and drawn
+  const axis = useMemo(() => ratingAxis(dataset.ratings), [dataset.ratings]);
+  const meanRange: [number, number] = [axis.domain[0] + 0.25, axis.domain[1] - 0.25];
 
   const degeneracy = useMemo(
     () => (result ? diagnoseFit(dataset.ratings, result) : null),
@@ -173,6 +180,9 @@ export function Playground() {
           truth={showTruth ? dataset.truth : null}
           height={340}
           yMax={yMax}
+          domain={axis.domain}
+          histRange={axis.histRange}
+          bins={axis.bins}
           draggable={config.init === "manual"}
           onMeansChange={(mu1, mu2) =>
             update({ init: "manual", manual: { ...config.manual, mu1, mu2 } })
@@ -188,9 +198,15 @@ export function Playground() {
         </p>
       </section>
 
+      {/* On lg the settings stay in view beside the results (sticky under the 3.5rem
+          header), scrolling on their own when taller than the window, with the bottom edge
+          faded while more settings sit below it. The negative margin plus padding keeps
+          the cards' shadows and focus rings clear of the scroll clip. */}
       <aside
+        ref={settingsRef}
         aria-label="Settings"
-        className="space-y-5 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start"
+        data-more-below={settingsMoreBelow ? "" : undefined}
+        className="settings-column space-y-5 lg:sticky lg:top-[4.5rem] lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:-m-2 lg:max-h-[calc(100dvh-5rem)] lg:[scrollbar-width:thin] lg:self-start lg:overflow-y-auto lg:p-2"
       >
         <section className="sheet space-y-4 p-4">
           <h2 className="text-base font-semibold">Data</h2>
@@ -314,8 +330,8 @@ export function Playground() {
                 label="μ₁"
                 accent={1}
                 value={config.manual.mu1}
-                min={0.75}
-                max={10.25}
+                min={meanRange[0]}
+                max={meanRange[1]}
                 step={0.05}
                 onChange={(mu1) => update({ manual: { ...config.manual, mu1 } })}
               />
@@ -323,8 +339,8 @@ export function Playground() {
                 label="μ₂"
                 accent={2}
                 value={config.manual.mu2}
-                min={0.75}
-                max={10.25}
+                min={meanRange[0]}
+                max={meanRange[1]}
                 step={0.05}
                 onChange={(mu2) => update({ manual: { ...config.manual, mu2 } })}
               />

@@ -57,7 +57,15 @@ export function SwitchCensus() {
       <p className="text-sm text-muted-foreground">
         Same data, same recipe (μ ~ U(3, 8), σ ~ U(0.5, 2), 15 iterations), 100 fresh random starts.
       </p>
-      <div aria-live="polite">
+      {/* a short live summary; the strip and paragraph below are not re-read on every rerun */}
+      <p className="sr-only" aria-live="polite" aria-atomic>
+        {error
+          ? "The census could not run."
+          : summary
+            ? `${switched} of ${COUNT} runs switched labels.`
+            : ""}
+      </p>
+      <div>
         {error ? (
           <p className="text-sm text-destructive">
             The census could not run: {error}. Try &ldquo;Another 100&rdquo;.
@@ -74,19 +82,21 @@ export function SwitchCensus() {
               role="img"
               aria-label={`${switched} of ${COUNT} runs ended with labels switched`}
             >
+              {/* switched runs: strong ink with diagonal hatching; lined-up runs: plain and muted.
+                  Teal and coral stay reserved for the two components. */}
               {summary.runs.map((r) => (
                 <span
                   key={r.index}
-                  className={r.swapped ? "flex-1 bg-comp-2/80" : "flex-1 bg-comp-1/80"}
+                  className={r.swapped ? "census-switched flex-1" : "flex-1 bg-muted"}
                   style={{ marginRight: 1 }}
                 />
               ))}
             </div>
             <p className="mt-3 text-sm">
               <span className="num text-lg font-medium">{switched}</span> of {COUNT} runs ended with
-              component 1 as the <em>low</em>-mean group (coral), so their &ldquo;sci-fi&rdquo;
+              component 1 as the <em>low</em>-mean group (hatched), so their &ldquo;sci-fi&rdquo;
               label would point at romance lovers. The other{" "}
-              <span className="num">{COUNT - switched}</span> (teal) happen to line up. It is close
+              <span className="num">{COUNT - switched}</span> (plain) happen to line up. It is close
               to a coin toss, and mostly decided by which mean the random start happens to put
               lower: that alone predicts the outcome in <span className="num">{predicted}</span> of{" "}
               {COUNT} runs.

@@ -35,9 +35,13 @@ export function Results({
     if (stage >= 1 && stage === result.iterations.length) return result.finalGamma1;
     return Array.from(eStep(dataset.ratings, paramsAt(result, Math.max(0, stage - 1))).gamma1);
   }, [result, stage, dataset.ratings]);
-  // NaN parameters or responsibilities (underflow, an emptied component) leave nothing to
-  // match, score or classify; the numbers would come from comparisons against NaN.
-  const usable = paramsFinite(params) && gamma1.every(Number.isFinite);
+  // NaN parameters (after a breakdown) leave nothing to match or classify. Finite
+  // parameters can still give NaN responsibilities: a rating that underflows under both
+  // components is 0/0. Matching and classifying need only the parameters; accuracy needs
+  // every responsibility, or it would only reflect how comparisons with NaN fall.
+  const paramsOk = paramsFinite(params);
+  const undefinedGammas = gamma1.reduce((n, g) => (Number.isFinite(g) ? n : n + 1), 0);
+  const usable = paramsOk && undefinedGammas === 0;
   const accWritten = accuracyAsWritten(gamma1, dataset.groups);
   const accMatched = accuracyMatched(gamma1, dataset.groups, matching);
   const names = dataset.groupNames;
@@ -90,12 +94,12 @@ export function Results({
                         <td key={i} className="py-2 pr-2">
                           {smart(x, 3)}
                           <span className="block text-[0.72rem] text-muted-foreground">
-                            true {tv[i].toFixed(1)}
+                            true {tv[i].toFixed(2)}
                           </span>
                         </td>
                       ))}
                       <td className="py-2 font-sans">
-                        {usable ? (
+                        {paramsOk ? (
                           matchedName(k)
                         ) : (
                           <span className="text-muted-foreground">n/a</span>
@@ -108,7 +112,7 @@ export function Results({
             </table>
           </ScrollX>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {!usable ? (
+            {!paramsOk ? (
               <>
                 The parameters at this stage are not numbers (NaN), so there is nothing to match
                 against the true groups. Step back to an earlier iteration to compare.
@@ -156,9 +160,22 @@ export function Results({
           </dl>
           {!usable ? (
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Not defined at t = {stage}: the responsibilities or parameters here contain NaN (see
-              the status line above), and any score computed from them would only reflect how
-              comparisons with NaN happen to fall.
+              {paramsOk ? (
+                <>
+                  Not defined at t = {stage}: the parameters are finite, but{" "}
+                  <span className="num">{undefinedGammas}</span> of {gamma1.length}{" "}
+                  {undefinedGammas === 1 ? "rating sits" : "ratings sit"} so far from both means
+                  that both densities round to 0, so {undefinedGammas === 1 ? "its" : "their"}{" "}
+                  responsibilities are 0/0 = NaN. A score that includes them would only reflect how
+                  comparisons with NaN happen to fall.
+                </>
+              ) : (
+                <>
+                  Not defined at t = {stage}: the parameters here are NaN (see the status line
+                  above), and any score computed from them would only reflect how comparisons with
+                  NaN happen to fall.
+                </>
+              )}
             </p>
           ) : (
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -174,7 +191,7 @@ export function Results({
         </section>
       </div>
 
-      {usable ? (
+      {paramsOk ? (
         <ClassifyNewRating params={params} names={names} swapped={matching.swapped} />
       ) : (
         <section aria-label="Classify a new rating" className="sheet p-4 sm:p-5">
@@ -248,10 +265,13 @@ function ClassifyNewRating({
 }) {
   const [x, setX] = useState(notebookRun.newUser.rating);
   const { p1, p2 } = posterior(x, params);
+  // a rating far from both means underflows: both densities are 0 and the posterior is 0/0
+  const defined = Number.isFinite(p1) && Number.isFinite(p2);
   const asRun = p1 > p2 ? names[0] : names[1];
   const matchedComp: 1 | 2 = p1 > p2 ? 1 : 2;
   const matched = names[(swapped ? 3 - matchedComp : matchedComp) - 1];
   const single = (s: string) => s.replace(/s$/, "");
+  const prob = (p: number) => (!defined ? "n/a" : p < 0.001 ? sci(p) : p.toFixed(3));
   return (
     <section aria-label="Classify a new rating" className="sheet p-4 sm:p-5">
       <h2 className="text-base font-semibold">Classify a new rating</h2>
@@ -271,28 +291,47 @@ function ClassifyNewRating({
         />
         <div className="num grid gap-1.5 text-sm">
           <p className="flex items-center gap-2">
-            <ComponentSwatch k={1} /> P(component 1 | x) = {p1 < 0.001 ? sci(p1) : p1.toFixed(3)}
+            <ComponentSwatch k={1} /> P(component 1 | x) = {prob(p1)}
           </p>
           <p className="flex items-center gap-2">
-            <ComponentSwatch k={2} /> P(component 2 | x) = {p2 < 0.001 ? sci(p2) : p2.toFixed(3)}
+            <ComponentSwatch k={2} /> P(component 2 | x) = {prob(p2)}
           </p>
         </div>
       </div>
-      <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div
-          className={cn(
-            "rounded-xl border p-3",
-            swapped && "border-correction/40 bg-correction-bg",
+      {!defined ? (
+        <p className="mt-4 rounded-xl border px-3 py-2.5 text-sm leading-relaxed text-muted-foreground">
+          {params.sigma1 > 0 && params.sigma2 > 0 ? (
+            <>
+              Not defined for <span className="num">x = {x.toFixed(1)}</span> at these parameters:
+              it sits so far from both means that both densities round to 0, so the posterior is 0/0
+              = NaN. Move the rating closer to one of the means.
+            </>
+          ) : (
+            <>
+              Not defined at these parameters: component {params.sigma1 > 0 ? 2 : 1}&apos;s σ is 0,
+              so its density is 0/0 for every rating. Step back to an earlier iteration.
+            </>
           )}
-        >
-          <dt className="text-xs text-muted-foreground">as the notebook would print it</dt>
-          <dd className="mt-1 font-medium">&ldquo;likely a {single(asRun).toUpperCase()}&rdquo;</dd>
-        </div>
-        <div className="rounded-xl border p-3">
-          <dt className="text-xs text-muted-foreground">after matching labels by mean</dt>
-          <dd className="mt-1 font-medium">{single(matched)}</dd>
-        </div>
-      </dl>
+        </p>
+      ) : (
+        <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div
+            className={cn(
+              "rounded-xl border p-3",
+              swapped && "border-correction/40 bg-correction-bg",
+            )}
+          >
+            <dt className="text-xs text-muted-foreground">as the notebook would print it</dt>
+            <dd className="mt-1 font-medium">
+              &ldquo;likely a {single(asRun).toUpperCase()}&rdquo;
+            </dd>
+          </div>
+          <div className="rounded-xl border p-3">
+            <dt className="text-xs text-muted-foreground">after matching labels by mean</dt>
+            <dd className="mt-1 font-medium">{single(matched)}</dd>
+          </div>
+        </dl>
+      )}
     </section>
   );
 }
