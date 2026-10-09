@@ -435,7 +435,10 @@ export function ExplainIteration({
 
             {result.decision === "pending" && !editing ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="mr-1 text-xs text-muted-foreground">Your decision:</span>
+                {/* on phones the label takes its own line so the three buttons share one row */}
+                <span className="mr-1 w-full text-xs text-muted-foreground sm:w-auto">
+                  Your decision:
+                </span>
                 <Button
                   size="sm"
                   variant="outline"
