@@ -174,10 +174,25 @@ describe("stats and formatting", () => {
     expect(pyFixed(Number.NaN, 3)).toBe("nan");
     expect(pyFixed(-425.495, 2)).toBe("-425.50");
     expect(pyPercent(0.905)).toBe("90.5%");
+    // exact binary ties round half to even, like Python (toFixed rounds them up)
+    expect(pyFixed(0.125, 2)).toBe("0.12");
+    expect(pyFixed(-0.125, 2)).toBe("-0.12");
+    expect(pyFixed(0.375, 2)).toBe("0.38");
+    expect(pyFixed(2.5, 0)).toBe("2");
+    expect(pyFixed(3.5, 0)).toBe("4");
+    expect(pyFixed(-0.5, 0)).toBe("-0");
+    expect(pyFixed(0.0625, 3)).toBe("0.062");
+    expect(pyFixed(1.005, 2)).toBe("1.00"); // 1.005 is stored as 1.00499..., not a tie
+    expect(pyPercent(361 / 400)).toBe("90.2%");
+    expect(pyPercent(0.00125)).toBe("0.1%");
     expect(sci(4.2376e-27)).toBe("4.24 × 10⁻²⁷");
     expect(smart(0.00001234)).toBe("1.23 × 10⁻⁵");
     expect(smart(0.4839414)).toBe("0.4839");
     expect(signed(8.9845)).toBe("+8.98");
     expect(signed(-0.5)).toBe("−0.50");
+    // the UI spells non-finite values like JavaScript; only pyFixed uses Python's "nan"
+    expect(smart(Number.NaN)).toBe("NaN");
+    expect(sci(Number.NaN)).toBe("NaN");
+    expect(signed(-Infinity)).toBe("−∞");
   });
 });
