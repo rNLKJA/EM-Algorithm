@@ -139,24 +139,32 @@ export default function MathsPage() {
           <p>
             If we knew which group each user belonged to, the complete-data log-likelihood would be
           </p>
-          <MathBlock>{String.raw`\log L(\theta; \mathbf{X}, \mathbf{Z}) = \sum_{i=1}^{n} \sum_{k=1}^{2} z_{ik} \log\big[\pi_k f(x_i \mid \mu_k, \sigma_k^2)\big]`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} &\log L(\theta; \mathbf{X}, \mathbf{Z}) \\ &\quad = \sum_{i=1}^{n} \sum_{k=1}^{2} z_{ik} \log\big[\pi_k f(x_i \mid \mu_k, \sigma_k^2)\big] \end{aligned}`}
+          >{String.raw`\log L(\theta; \mathbf{X}, \mathbf{Z}) = \sum_{i=1}^{n} \sum_{k=1}^{2} z_{ik} \log\big[\pi_k f(x_i \mid \mu_k, \sigma_k^2)\big]`}</MathBlock>
 
           <H2 id="e-step">E-step: &ldquo;what&apos;s the best guess?&rdquo;</H2>
           <p>
             The E-step replaces each unknown <M>{String.raw`z_{ik}`}</M> by its expected value given
             the data and the current parameters <M>{String.raw`\theta^{(t)}`}</M>:
           </p>
-          <MathBlock>{String.raw`\gamma_{ik} = E[z_{ik} \mid x_i, \theta^{(t)}] = P(z_{ik} = 1 \mid x_i, \theta^{(t)})`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} \gamma_{ik} &= E[z_{ik} \mid x_i, \theta^{(t)}] \\ &= P(z_{ik} = 1 \mid x_i, \theta^{(t)}) \end{aligned}`}
+          >{String.raw`\gamma_{ik} = E[z_{ik} \mid x_i, \theta^{(t)}] = P(z_{ik} = 1 \mid x_i, \theta^{(t)})`}</MathBlock>
           <p>
             This is about group membership, not activity: every user is in exactly one group, and{" "}
             <M>{String.raw`\gamma_{ik}`}</M> is how sure we are which. By Bayes&apos; theorem,
           </p>
-          <MathBlock>{String.raw`P(z_{ik} = 1 \mid x_i, \theta^{(t)}) = \frac{P(x_i \mid z_{ik} = 1, \theta^{(t)}) \, P(z_{ik} = 1 \mid \theta^{(t)})}{P(x_i \mid \theta^{(t)})}`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} &P(z_{ik} = 1 \mid x_i, \theta^{(t)}) \\ &\quad = \frac{\begin{gathered} P(x_i \mid z_{ik} = 1, \theta^{(t)}) \\ {}\times P(z_{ik} = 1 \mid \theta^{(t)}) \end{gathered}}{P(x_i \mid \theta^{(t)})} \end{aligned}`}
+          >{String.raw`P(z_{ik} = 1 \mid x_i, \theta^{(t)}) = \frac{P(x_i \mid z_{ik} = 1, \theta^{(t)}) \, P(z_{ik} = 1 \mid \theta^{(t)})}{P(x_i \mid \theta^{(t)})}`}</MathBlock>
           <p>
             The three pieces are the group&apos;s density, its prior share, and the marginal density
             of the rating:
           </p>
-          <MathBlock>{String.raw`\begin{aligned} P(x_i \mid z_{ik} = 1, \theta^{(t)}) &= f(x_i \mid \mu_k^{(t)}, \sigma_k^{2(t)}) \\ P(z_{ik} = 1 \mid \theta^{(t)}) &= \pi_k^{(t)} \\ P(x_i \mid \theta^{(t)}) &= \textstyle\sum_{j=1}^{2} \pi_j^{(t)} f(x_i \mid \mu_j^{(t)}, \sigma_j^{2(t)}) \end{aligned}`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} &P(x_i \mid z_{ik} = 1, \theta^{(t)}) \\ &\qquad = f(x_i \mid \mu_k^{(t)}, \sigma_k^{2(t)}) \\[0.4em] &P(z_{ik} = 1 \mid \theta^{(t)}) = \pi_k^{(t)} \\[0.4em] &P(x_i \mid \theta^{(t)}) \\ &\qquad = \textstyle\sum_{j=1}^{2} \pi_j^{(t)} f(x_i \mid \mu_j^{(t)}, \sigma_j^{2(t)}) \end{aligned}`}
+          >{String.raw`\begin{aligned} P(x_i \mid z_{ik} = 1, \theta^{(t)}) &= f(x_i \mid \mu_k^{(t)}, \sigma_k^{2(t)}) \\ P(z_{ik} = 1 \mid \theta^{(t)}) &= \pi_k^{(t)} \\ P(x_i \mid \theta^{(t)}) &= \textstyle\sum_{j=1}^{2} \pi_j^{(t)} f(x_i \mid \mu_j^{(t)}, \sigma_j^{2(t)}) \end{aligned}`}</MathBlock>
           <p>Putting them together:</p>
           <MathBlock>{String.raw`\gamma_{ik} = \frac{\pi_k^{(t)} f(x_i \mid \mu_k^{(t)}, \sigma_k^{2(t)})}{\sum_{j=1}^{2} \pi_j^{(t)} f(x_i \mid \mu_j^{(t)}, \sigma_j^{2(t)})}`}</MathBlock>
           <p>
@@ -190,7 +198,9 @@ export default function MathsPage() {
             With responsibilities in hand, each group is re-estimated by weighted averages, the
             weights being how strongly each user belongs to the group:
           </p>
-          <MathBlock>{String.raw`\pi_k^{(t+1)} = \frac{1}{n}\sum_{i=1}^{n} \gamma_{ik}, \qquad \mu_k^{(t+1)} = \frac{\sum_{i=1}^{n} \gamma_{ik} x_i}{\sum_{i=1}^{n} \gamma_{ik}}`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{gathered} \pi_k^{(t+1)} = \frac{1}{n}\sum_{i=1}^{n} \gamma_{ik} \\[0.3em] \mu_k^{(t+1)} = \frac{\sum_{i=1}^{n} \gamma_{ik} x_i}{\sum_{i=1}^{n} \gamma_{ik}} \end{gathered}`}
+          >{String.raw`\pi_k^{(t+1)} = \frac{1}{n}\sum_{i=1}^{n} \gamma_{ik}, \qquad \mu_k^{(t+1)} = \frac{\sum_{i=1}^{n} \gamma_{ik} x_i}{\sum_{i=1}^{n} \gamma_{ik}}`}</MathBlock>
           <MathBlock>{String.raw`\sigma_k^{2(t+1)} = \frac{\sum_{i=1}^{n} \gamma_{ik} (x_i - \mu_k^{(t+1)})^2}{\sum_{i=1}^{n} \gamma_{ik}}`}</MathBlock>
           <p>
             The mixing proportion is the average membership; the mean is a weighted average in which
@@ -198,7 +208,9 @@ export default function MathsPage() {
             spread around the new mean. The explainer&apos;s example: users with sci-fi
             probabilities 0.85, 0.20 and 0.90 rated 5, 4 and 5, so
           </p>
-          <MathBlock>{String.raw`\mu_{\text{sci-fi}} = \frac{0.85 \times 5 + 0.20 \times 4 + 0.90 \times 5}{0.85 + 0.20 + 0.90} = \frac{9.55}{1.95} \approx 4.9`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} \mu_{\text{sci-fi}} &= \frac{0.85 \times 5 + 0.20 \times 4 + 0.90 \times 5}{0.85 + 0.20 + 0.90} \\ &= \frac{9.55}{1.95} \approx 4.9 \end{aligned}`}
+          >{String.raw`\mu_{\text{sci-fi}} = \frac{0.85 \times 5 + 0.20 \times 4 + 0.90 \times 5}{0.85 + 0.20 + 0.90} = \frac{9.55}{1.95} \approx 4.9`}</MathBlock>
           <p>
             (That one checks out.) Better groups give better memberships, which give better groups:
             a feedback loop.
@@ -206,13 +218,19 @@ export default function MathsPage() {
 
           <H2 id="mean-derivation">Deriving the mean update</H2>
           <p>Start from the expected complete-data log-likelihood:</p>
-          <MathBlock>{String.raw`\begin{aligned} Q(\theta \mid \theta^{(t)}) &= \sum_{i=1}^{n} \sum_{k=1}^{2} \gamma_{ik} \log\big[\pi_k f(x_i \mid \mu_k, \sigma_k^2)\big] \\ &= \sum_{i=1}^{n} \sum_{k=1}^{2} \gamma_{ik} \big[\log \pi_k + \log f(x_i \mid \mu_k, \sigma_k^2)\big] \end{aligned}`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} &Q(\theta \mid \theta^{(t)}) \\ &\;\; = \sum_{i=1}^{n} \sum_{k=1}^{2} \gamma_{ik} \log\big[\pi_k f(x_i \mid \mu_k, \sigma_k^2)\big] \\ &\;\; = \sum_{i=1}^{n} \sum_{k=1}^{2} \gamma_{ik} \big[\log \pi_k \\ &\qquad\qquad {} + \log f(x_i \mid \mu_k, \sigma_k^2)\big] \end{aligned}`}
+          >{String.raw`\begin{aligned} Q(\theta \mid \theta^{(t)}) &= \sum_{i=1}^{n} \sum_{k=1}^{2} \gamma_{ik} \log\big[\pi_k f(x_i \mid \mu_k, \sigma_k^2)\big] \\ &= \sum_{i=1}^{n} \sum_{k=1}^{2} \gamma_{ik} \big[\log \pi_k + \log f(x_i \mid \mu_k, \sigma_k^2)\big] \end{aligned}`}</MathBlock>
           <p>
             Differentiate with respect to <M>{String.raw`\mu_k`}</M>:
           </p>
-          <MathBlock>{String.raw`\begin{aligned} \frac{\partial Q}{\partial \mu_k} &= \sum_{i=1}^{n} \gamma_{ik} \frac{\partial}{\partial \mu_k} \left[-\tfrac{1}{2}\log(2\pi\sigma_k^2) - \frac{(x_i - \mu_k)^2}{2\sigma_k^2}\right] \\ &= \sum_{i=1}^{n} \gamma_{ik} \frac{x_i - \mu_k}{\sigma_k^2} \end{aligned}`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} \frac{\partial Q}{\partial \mu_k} &= \sum_{i=1}^{n} \gamma_{ik} \frac{\partial}{\partial \mu_k} \bigg[-\tfrac{1}{2}\log(2\pi\sigma_k^2) \\ &\hspace{6em} {} - \frac{(x_i - \mu_k)^2}{2\sigma_k^2}\bigg] \\ &= \sum_{i=1}^{n} \gamma_{ik} \frac{x_i - \mu_k}{\sigma_k^2} \end{aligned}`}
+          >{String.raw`\begin{aligned} \frac{\partial Q}{\partial \mu_k} &= \sum_{i=1}^{n} \gamma_{ik} \frac{\partial}{\partial \mu_k} \left[-\tfrac{1}{2}\log(2\pi\sigma_k^2) - \frac{(x_i - \mu_k)^2}{2\sigma_k^2}\right] \\ &= \sum_{i=1}^{n} \gamma_{ik} \frac{x_i - \mu_k}{\sigma_k^2} \end{aligned}`}</MathBlock>
           <p>Set it to zero and solve:</p>
-          <MathBlock>{String.raw`\sum_{i=1}^{n} \gamma_{ik} (x_i - \mu_k) = 0 \;\;\Longrightarrow\;\; \mu_k = \frac{\sum_{i=1}^{n} \gamma_{ik} x_i}{\sum_{i=1}^{n} \gamma_{ik}}`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{gathered} \sum_{i=1}^{n} \gamma_{ik} (x_i - \mu_k) = 0 \\ \Longrightarrow\;\; \mu_k = \frac{\sum_{i=1}^{n} \gamma_{ik} x_i}{\sum_{i=1}^{n} \gamma_{ik}} \end{gathered}`}
+          >{String.raw`\sum_{i=1}^{n} \gamma_{ik} (x_i - \mu_k) = 0 \;\;\Longrightarrow\;\; \mu_k = \frac{\sum_{i=1}^{n} \gamma_{ik} x_i}{\sum_{i=1}^{n} \gamma_{ik}}`}</MathBlock>
 
           <H2 id="normal-beta">A Normal + Beta mixture</H2>
           <p>
@@ -220,18 +238,26 @@ export default function MathsPage() {
             a continuous 0 to 10 scale (normal) while casual users give a thumbs up or down,
             recorded on [0, 1] (beta):
           </p>
-          <MathBlock>{String.raw`f_1(x \mid \mu, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(x - \mu)^2}{2\sigma^2}\right)`}</MathBlock>
-          <MathBlock>{String.raw`f_2(x \mid \alpha, \beta) = \frac{x^{\alpha-1}(1-x)^{\beta-1}}{B(\alpha, \beta)}, \qquad B(\alpha, \beta) = \frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} &f_1(x \mid \mu, \sigma^2) \\ &\quad = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(x - \mu)^2}{2\sigma^2}\right) \end{aligned}`}
+          >{String.raw`f_1(x \mid \mu, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(x - \mu)^2}{2\sigma^2}\right)`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{gathered} f_2(x \mid \alpha, \beta) = \frac{x^{\alpha-1}(1-x)^{\beta-1}}{B(\alpha, \beta)} \\[0.3em] B(\alpha, \beta) = \frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)} \end{gathered}`}
+          >{String.raw`f_2(x \mid \alpha, \beta) = \frac{x^{\alpha-1}(1-x)^{\beta-1}}{B(\alpha, \beta)}, \qquad B(\alpha, \beta) = \frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}`}</MathBlock>
           <p>
             The E-step is the same Bayes calculation with two different densities in the numerator:
           </p>
-          <MathBlock>{String.raw`\gamma_{i1} = \frac{\pi_1^{(t)} f_1(x_i \mid \mu^{(t)}, \sigma^{2(t)})}{\pi_1^{(t)} f_1(x_i \mid \mu^{(t)}, \sigma^{2(t)}) + \pi_2^{(t)} f_2(x_i \mid \alpha^{(t)}, \beta^{(t)})}, \quad \gamma_{i2} = 1 - \gamma_{i1}`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{gathered} \gamma_{i1} = \frac{\pi_1^{(t)} f_1(x_i \mid \mu^{(t)}, \sigma^{2(t)})}{\begin{gathered} \pi_1^{(t)} f_1(x_i \mid \mu^{(t)}, \sigma^{2(t)}) \\ {}+ \pi_2^{(t)} f_2(x_i \mid \alpha^{(t)}, \beta^{(t)}) \end{gathered}} \\[0.3em] \gamma_{i2} = 1 - \gamma_{i1} \end{gathered}`}
+          >{String.raw`\gamma_{i1} = \frac{\pi_1^{(t)} f_1(x_i \mid \mu^{(t)}, \sigma^{2(t)})}{\pi_1^{(t)} f_1(x_i \mid \mu^{(t)}, \sigma^{2(t)}) + \pi_2^{(t)} f_2(x_i \mid \alpha^{(t)}, \beta^{(t)})}, \quad \gamma_{i2} = 1 - \gamma_{i1}`}</MathBlock>
           <p>
             The mixing proportions and the normal&apos;s <M>\mu</M>, <M>{String.raw`\sigma^2`}</M>{" "}
             update exactly as before (using <M>{String.raw`\gamma_{i1}`}</M>). The beta parameters
             have no closed form; they solve
           </p>
-          <MathBlock>{String.raw`\begin{aligned} \frac{\partial Q}{\partial \alpha} &= \sum_{i=1}^{n} \gamma_{i2} \big[\log x_i - \psi(\alpha) + \psi(\alpha + \beta)\big] = 0 \\ \frac{\partial Q}{\partial \beta} &= \sum_{i=1}^{n} \gamma_{i2} \big[\log(1-x_i) - \psi(\beta) + \psi(\alpha + \beta)\big] = 0 \end{aligned}`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} \frac{\partial Q}{\partial \alpha} &= \sum_{i=1}^{n} \gamma_{i2} \big[\log x_i - \psi(\alpha) \\ &\qquad {} + \psi(\alpha + \beta)\big] = 0 \\[0.4em] \frac{\partial Q}{\partial \beta} &= \sum_{i=1}^{n} \gamma_{i2} \big[\log(1-x_i) - \psi(\beta) \\ &\qquad {} + \psi(\alpha + \beta)\big] = 0 \end{aligned}`}
+          >{String.raw`\begin{aligned} \frac{\partial Q}{\partial \alpha} &= \sum_{i=1}^{n} \gamma_{i2} \big[\log x_i - \psi(\alpha) + \psi(\alpha + \beta)\big] = 0 \\ \frac{\partial Q}{\partial \beta} &= \sum_{i=1}^{n} \gamma_{i2} \big[\log(1-x_i) - \psi(\beta) + \psi(\alpha + \beta)\big] = 0 \end{aligned}`}</MathBlock>
           <p>
             where <M>{String.raw`\psi(x) = \frac{d}{dx}\log\Gamma(x)`}</M> is the digamma function.
             In the explainer&apos;s example, starting from <M>{String.raw`\mu = 7,\ \sigma = 1`}</M>{" "}
@@ -277,14 +303,18 @@ export default function MathsPage() {
             Maximise <M>{String.raw`\sum_i \sum_k \gamma_{ik} \log \pi_k`}</M> subject to{" "}
             <M>{String.raw`\pi_1 + \pi_2 = 1`}</M>:
           </p>
-          <MathBlock>{String.raw`\frac{\partial}{\partial \pi_k}\Big[\sum_{i,k} \gamma_{ik} \log \pi_k + \lambda\big(1 - \textstyle\sum_k \pi_k\big)\Big] = \frac{\sum_i \gamma_{ik}}{\pi_k} - \lambda = 0`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} &\frac{\partial}{\partial \pi_k}\Big[\sum_{i,k} \gamma_{ik} \log \pi_k + \lambda\big(1 - \textstyle\sum_k \pi_k\big)\Big] \\ &\quad = \frac{\sum_i \gamma_{ik}}{\pi_k} - \lambda = 0 \end{aligned}`}
+          >{String.raw`\frac{\partial}{\partial \pi_k}\Big[\sum_{i,k} \gamma_{ik} \log \pi_k + \lambda\big(1 - \textstyle\sum_k \pi_k\big)\Big] = \frac{\sum_i \gamma_{ik}}{\pi_k} - \lambda = 0`}</MathBlock>
           <MathBlock>{String.raw`\Longrightarrow\;\; \pi_k = \frac{1}{n}\sum_{i=1}^{n} \gamma_{ik}`}</MathBlock>
           <p>
             since summing over <M>k</M> gives{" "}
             <M>{String.raw`\lambda = \sum_{i,k}\gamma_{ik} = n`}</M>.
           </p>
           <H3>Variances</H3>
-          <MathBlock>{String.raw`\frac{\partial Q}{\partial \sigma_k^2} = \sum_{i=1}^{n} \gamma_{ik} \left[-\frac{1}{2\sigma_k^2} + \frac{(x_i - \mu_k)^2}{2\sigma_k^4}\right] = 0 \;\;\Longrightarrow\;\; \sigma_k^2 = \frac{\sum_i \gamma_{ik} (x_i - \mu_k)^2}{\sum_i \gamma_{ik}}`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} \frac{\partial Q}{\partial \sigma_k^2} &= \sum_{i=1}^{n} \gamma_{ik} \bigg[-\frac{1}{2\sigma_k^2} \\ &\qquad\quad {} + \frac{(x_i - \mu_k)^2}{2\sigma_k^4}\bigg] = 0 \\[0.3em] \Longrightarrow\;\; \sigma_k^2 &= \frac{\sum_i \gamma_{ik} (x_i - \mu_k)^2}{\sum_i \gamma_{ik}} \end{aligned}`}
+          >{String.raw`\frac{\partial Q}{\partial \sigma_k^2} = \sum_{i=1}^{n} \gamma_{ik} \left[-\frac{1}{2\sigma_k^2} + \frac{(x_i - \mu_k)^2}{2\sigma_k^4}\right] = 0 \;\;\Longrightarrow\;\; \sigma_k^2 = \frac{\sum_i \gamma_{ik} (x_i - \mu_k)^2}{\sum_i \gamma_{ik}}`}</MathBlock>
           <p>
             The notebook updates <M>{String.raw`\sigma_k`}</M> as the square root of this, which is
             the same update. If one component&apos;s weight concentrates on a single point, the
@@ -296,7 +326,9 @@ export default function MathsPage() {
             For any distribution <M>{String.raw`q_i`}</M> over the group of user <M>i</M>,
             Jensen&apos;s inequality gives a lower bound on the log-likelihood:
           </p>
-          <MathBlock>{String.raw`\ell(\theta) = \sum_i \log \sum_k q_{ik} \frac{\pi_k f(x_i \mid \mu_k, \sigma_k)}{q_{ik}} \;\ge\; \sum_i \sum_k q_{ik} \log \frac{\pi_k f(x_i \mid \mu_k, \sigma_k)}{q_{ik}}`}</MathBlock>
+          <MathBlock
+            narrow={String.raw`\begin{aligned} \ell(\theta) &= \sum_i \log \sum_k q_{ik} \frac{\pi_k f(x_i \mid \mu_k, \sigma_k)}{q_{ik}} \\ &\ge \sum_i \sum_k q_{ik} \log \frac{\pi_k f(x_i \mid \mu_k, \sigma_k)}{q_{ik}} \end{aligned}`}
+          >{String.raw`\ell(\theta) = \sum_i \log \sum_k q_{ik} \frac{\pi_k f(x_i \mid \mu_k, \sigma_k)}{q_{ik}} \;\ge\; \sum_i \sum_k q_{ik} \log \frac{\pi_k f(x_i \mid \mu_k, \sigma_k)}{q_{ik}}`}</MathBlock>
           <p>
             The E-step chooses <M>{String.raw`q_{ik} = \gamma_{ik}`}</M>, which makes the bound
             touch <M>{String.raw`\ell(\theta^{(t)})`}</M>; the M-step maximises the bound over{" "}

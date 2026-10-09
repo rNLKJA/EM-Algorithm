@@ -94,7 +94,7 @@
   --comp-2-ink: #ad3f25;
   --correction: #8a5a00;
   --correction-bg: #f7e6b4;
-  --ok: #2f7d3b;
+  --ok: #256830;
 
   --grid: rgb(29 42 48 / 0.05);
   --chart-1: var(--comp-1);
@@ -184,14 +184,43 @@
     overflow-y: hidden;
     padding: 0.25rem 0;
   }
+  /* inside a ScrollX wrapper the wrapper scrolls (and can take focus), not KaTeX's own box */
+  .scroll-x > div > .katex-display {
+    overflow: visible;
+  }
   @media (max-width: 640px) {
     .katex-display > .katex {
-      font-size: 0.95em;
+      font-size: clamp(0.72em, 3.5vw, 0.95em);
     }
   }
 }
 
 @layer components {
+  /* sideways scroll box (components/common/scroll-x.tsx): fade the edge hiding more */
+  .scroll-x {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+  .scroll-x[data-fade-end] {
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  }
+  .scroll-x[data-fade-start] {
+    mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent);
+  }
+  .scroll-x[data-fade-start][data-fade-end] {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 2.5rem,
+      #000 calc(100% - 2.5rem),
+      transparent
+    );
+  }
+  /* a mask would clip the focus ring, so drop it (and draw the ring inside) while focused */
+  .scroll-x:focus-visible {
+    mask-image: none;
+    outline-offset: -2px;
+  }
   /* a sheet of paper (or a slab of blackboard) for panels and charts */
   .sheet {
     @apply rounded-2xl border bg-card text-card-foreground shadow-[0_1px_0_rgb(0_0_0/0.03),0_8px_24px_-12px_rgb(29_42_48/0.18)] dark:shadow-[0_1px_0_rgb(255_255_255/0.03),0_10px_30px_-14px_rgb(0_0_0/0.6)];
@@ -205,6 +234,12 @@
   .hand {
     font-family: var(--font-caveat), var(--font-plex-greek), cursive;
     @apply leading-none;
+  }
+  /* ℓ from KaTeX's main font (loaded with katex.min.css); see components/common/ell.tsx */
+  .ell {
+    font-family: KaTeX_Main, "Cambria Math", "STIX Two Math", "Times New Roman", serif;
+    font-style: normal;
+    font-weight: 400;
   }
   .eyebrow {
     @apply font-mono text-[0.72rem] font-medium tracking-[0.14em] text-muted-foreground uppercase;
