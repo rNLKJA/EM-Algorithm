@@ -21,8 +21,8 @@ const SORTED = [...DATA].sort((a, b) => a - b);
 
 const TARGETS = {
   ten: { value: 10, label: "the 7 ratings clipped to 10" },
-  lowest: { value: SORTED[0], label: `the lowest rating (${SORTED[0].toFixed(2)})` },
-  crowd: { value: SORTED[100], label: `a rating in the crowd (${SORTED[100].toFixed(2)})` },
+  lowest: { value: SORTED[0], label: "the lowest rating" },
+  crowd: { value: SORTED[100], label: "a rating in the crowd" },
 } as const;
 type TargetId = keyof typeof TARGETS;
 
@@ -160,7 +160,7 @@ export function CollapseDemo() {
               value: id,
               label:
                 id === "ten" ? `the ${tied} tens` : id === "lowest" ? "lowest rating" : "the crowd",
-              description: TARGETS[id].label,
+              description: `${TARGETS[id].label}: μ₂ = ${TARGETS[id].value.toFixed(2)}`,
             }))}
           />
           <p className="text-xs text-muted-foreground">
