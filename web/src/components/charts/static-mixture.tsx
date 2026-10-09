@@ -182,8 +182,10 @@ export function StaticMixture({
                 x={px + (k === 1 ? -12 : 12)}
                 y={py - 12}
                 textAnchor={k === 1 ? "end" : "start"}
-                className="hand"
-                style={{ fill: k === 1 ? "var(--comp-1-ink)" : "var(--comp-2-ink)", fontSize: 26 }}
+                // Font sizes are in viewBox units; on phones the chart is drawn at about half
+                // size, so a larger size keeps the labels at a readable 15px or so.
+                className="hand text-[26px] max-sm:text-[38px]"
+                style={{ fill: k === 1 ? "var(--comp-1-ink)" : "var(--comp-2-ink)" }}
               >
                 μ{k === 1 ? "₁" : "₂"} ≈ {mu.toFixed(2)}
               </text>

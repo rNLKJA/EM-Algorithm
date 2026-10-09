@@ -152,6 +152,7 @@ export function Stepper({ formulas }: { formulas: StepperFormulas }) {
           <Segmented
             ariaLabel="Choose a starting guess"
             size="sm"
+            className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto"
             value={preset}
             onChange={choosePreset}
             options={[
