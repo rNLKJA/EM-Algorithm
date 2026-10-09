@@ -44,6 +44,9 @@ interface Result {
   ungrounded: string[];
   provider: Provider;
   model: string;
+  /** the model that was asked; differs from `model` when Anthropic's fallback answered */
+  requestedModel: string;
+  fallback: boolean;
   latencyMs: number;
   usage: TokenUsage | null;
   decision: Decision;
@@ -115,6 +118,7 @@ export function ExplainIteration({
       feature: EXPLAIN_FEATURE,
       provider,
       model,
+      requested_model: model,
       input: { system: EXPLAIN_SYSTEM_PROMPT, user },
     };
     const started = performance.now();
@@ -138,6 +142,7 @@ export function ExplainIteration({
       const entry: AuditEntry = {
         ...base,
         model: res.model,
+        fallback: res.fallback,
         output: res.raw,
         status: "ok",
         latency_ms: res.latencyMs,
@@ -157,6 +162,8 @@ export function ExplainIteration({
         ungrounded,
         provider,
         model: res.model,
+        requestedModel: model,
+        fallback: res.fallback,
         latencyMs: res.latencyMs,
         usage: res.usage,
         decision: "pending",
@@ -172,6 +179,7 @@ export function ExplainIteration({
           // a refusal, a cut-off reply or one that failed validation still cost
           // tokens: keep what came back
           model: ai?.model ?? model,
+          fallback: ai?.fallback ?? false,
           output: ai?.raw ?? null,
           status: "error",
           error: {
@@ -246,9 +254,9 @@ export function ExplainIteration({
             </span>
           </h3>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Sends only this iteration&apos;s numbers (parameters before and after, responsibilities,
-            log-likelihood, stopping rule) to {PROVIDER_LABEL[settings.provider]}, from your
-            browser.{" "}
+            Sends this iteration&apos;s numbers (parameters before and after, responsibilities,
+            log-likelihood, stopping rule) and a fixed description of the page and data set, with no
+            personal data, to {PROVIDER_LABEL[settings.provider]}, from your browser.{" "}
             <Link href="/methods#ai-use" className="underline underline-offset-3">
               What is sent
             </Link>
@@ -296,7 +304,17 @@ export function ExplainIteration({
         </p>
       ) : null}
 
-      <div aria-live="polite">
+      {/* a short announcement, not the whole panel: the article is long and changes on every decision */}
+      <p role="status" className="sr-only">
+        {busy
+          ? "Asking the AI…"
+          : result
+            ? result.decision === "pending"
+              ? "AI-generated explanation ready."
+              : `AI-generated explanation ${result.decision}.`
+            : ""}
+      </p>
+      <div>
         {error ? (
           <p role="alert" className="mt-3 text-sm text-destructive">
             {error}
@@ -333,8 +351,11 @@ export function ExplainIteration({
                 <Sparkles className="size-3" aria-hidden /> AI-generated
               </span>
               <span className="text-muted-foreground">
-                {modelLabel(result.model)} via {PROVIDER_LABEL[result.provider]} ·{" "}
-                {(result.latencyMs / 1000).toFixed(1)} s
+                {modelLabel(result.model)} via {PROVIDER_LABEL[result.provider]}
+                {result.fallback
+                  ? ` (answered after ${modelLabel(result.requestedModel)} declined: server-side fallback)`
+                  : ""}{" "}
+                · {(result.latencyMs / 1000).toFixed(1)} s
                 {result.usage
                   ? ` · ${result.usage.input_tokens.toLocaleString("en-AU")} in / ${result.usage.output_tokens.toLocaleString("en-AU")} out tokens`
                   : ""}

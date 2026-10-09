@@ -171,6 +171,11 @@ export function AuditLogView() {
                   <span className="font-medium">{e.feature}</span>
                   <span className="text-muted-foreground">
                     {modelLabel(e.model)} via {PROVIDER_LABEL[e.provider]}
+                    {e.fallback && e.requested_model
+                      ? ` (requested ${modelLabel(e.requested_model)}; server-side fallback answered)`
+                      : e.fallback
+                        ? " (server-side fallback answered)"
+                        : ""}
                   </span>
                   <span
                     className={cn(

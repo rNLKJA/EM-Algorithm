@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { alignParams, matchByMean } from "@/lib/em/labels";
 import { NOTEBOOK_GROUP_NAMES, notebookFinal, notebookRun } from "@/lib/em/notebook-run";
 import { minus, pyPercent, signed } from "@/lib/format";
-import { pageMetadata, repoFile, site } from "@/lib/site";
+import { pageMetadata, repoFile, repoTree, site } from "@/lib/site";
 import { wilsonInterval } from "@/lib/stats/intervals";
 
 export const metadata: Metadata = pageMetadata({ description: site.description, path: "/" });
@@ -217,8 +217,8 @@ export default function Home() {
                 <dt className="text-sm text-muted-foreground">classified correctly</dt>
                 <dd className="num mt-1 text-3xl font-medium">{pyPercent(s.accuracyAsWritten)}</dd>
                 <dd className="mt-1 text-xs text-muted-foreground">
-                  of the 200 users, using γ &gt; 0.5; 95% CI {pyPercent(acc.lower)} to{" "}
-                  {pyPercent(acc.upper)} (Wilson)
+                  of the 200 users the model was fitted to (in-sample), using γ &gt; 0.5; 95% CI{" "}
+                  {pyPercent(acc.lower)} to {pyPercent(acc.upper)} (Wilson)
                 </dd>
               </div>
               <div className="sheet p-4">
@@ -450,7 +450,7 @@ export default function Home() {
             <h3 className="text-lg font-semibold">Provenance</h3>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               The explainer and notebook are kept unchanged in{" "}
-              <a className="link" href={`${site.repo}/tree/main/original`}>
+              <a className="link" href={repoTree("original")}>
                 original/
               </a>
               . A script,{" "}

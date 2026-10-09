@@ -232,7 +232,9 @@ export default function PitfallsPage() {
                 {signed(100 * drop.estimate, 1)} percentage points (paired bootstrap 95% CI{" "}
                 {signed(100 * drop.interval.lower, 1)} to {signed(100 * drop.interval.upper, 1)}).{" "}
                 {drop.aLower} users went from right to wrong and {drop.aHigher} from wrong to right;
-                the other {drop.ties} were classified the same way by both.
+                the other {drop.ties} were classified the same way by both. Both accuracies are
+                in-sample (each fit is scored on the ratings it was fitted to), so the intervals
+                describe the 200 users drawn, not the uncertainty of either fit.
               </p>
               <p>
                 That is not a bug. EM maximises the likelihood of the data it is given, and these

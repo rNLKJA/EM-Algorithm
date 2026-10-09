@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Callout } from "@/components/common/callout";
+import { Ell } from "@/components/common/ell";
 import { PageHeader } from "@/components/common/page-header";
 import { ScrollX } from "@/components/common/scroll-x";
 import { BootstrapSection } from "@/components/inference/bootstrap-section";
@@ -116,6 +117,17 @@ export default function InferencePage() {
 
   const full = a.modelChoice.full;
   const trimmed = a.modelChoice.withoutClipped;
+  // how often each criterion picks K on fresh samples (the sentence quotes these, not adjectives)
+  const picked = (rows: typeof a.selection.model.bic, K: number) =>
+    rows.find((r) => r.K === K)!.picked;
+  const selBic1 = picked(a.selection.model.bic, 1);
+  const selBic2 = picked(a.selection.model.bic, 2);
+  const selBic3 = picked(a.selection.model.bic, 3);
+  const selBic1Clipped = picked(a.selection.clipped.bic, 1);
+  const selBic2Clipped = picked(a.selection.clipped.bic, 2);
+  const selBic3Clipped = picked(a.selection.clipped.bic, 3);
+  const selAic2 = picked(a.selection.model.aic, 2);
+  const selAic2Clipped = picked(a.selection.clipped.aic, 2);
   const bicRow = full.rows.find((r) => r.K === full.bestByBic);
   // the highest-mean component of BIC's choice: the one sitting on the ratings clipped to 10.0
   const pile = bicRow?.params
@@ -186,16 +198,16 @@ export default function InferencePage() {
               Standard errors only mean something at a maximum of the likelihood, and the
               notebook&apos;s 15 iterations had not reached one. So the run is finished first: same
               data, same random start, until the log-likelihood moves by less than 10⁻¹⁰ (
-              {a.mle.iterations} iterations, ℓ = {fmt(a.mle.logLikelihood, 3)}). The notebook&apos;s
-              own estimates stay in the first column, unchanged. Components are ordered by mean (
-              <Link href="/methods#dr-002">DR-002</Link>): component 1 is the low group, the
-              notebook&apos;s romance lovers.
+              {a.mle.iterations} iterations, <Ell /> = {fmt(a.mle.logLikelihood, 3)}). The
+              notebook&apos;s own estimates stay in the first column, unchanged. Components are
+              ordered by mean (<Link href="/methods#dr-002">DR-002</Link>): component 1 is the low
+              group, the notebook&apos;s romance lovers.
             </p>
             <p>
               Two kinds of uncertainty sit beside each estimate. The <strong>Hessian</strong>{" "}
               standard error measures how sharply the log-likelihood falls away from its peak: the
-              observed information (minus the matrix of second derivatives of ℓ at the maximum),
-              inverted. It gives a Wald interval,{" "}
+              observed information (minus the matrix of second derivatives of <Ell /> at the
+              maximum), inverted. It gives a Wald interval,{" "}
               <M>{String.raw`\hat\theta \pm 1.96\,\mathrm{SE}`}</M>. The{" "}
               <strong>parametric bootstrap</strong> simulates {count(a.bootstrap.B)} new data sets
               of 200 ratings from the fitted mixture, refits EM to each and reads the 2.5% and 97.5%
@@ -219,8 +231,8 @@ export default function InferencePage() {
             </Callout>
             {other ? (
               <Callout title="A second, higher maximum">
-                {other.startsReaching} of {other.starts} random starts reach a different maximum, ℓ
-                = {fmt(other.logLikelihood, 2)}, higher by{" "}
+                {other.startsReaching} of {other.starts} random starts reach a different maximum,{" "}
+                <Ell /> = {fmt(other.logLikelihood, 2)}, higher by{" "}
                 {fmt(other.logLikelihood - a.mle.logLikelihood, 2)}: a broad component (
                 {fmt(100 * other.theta[0], 0)}% at {fmt(other.theta[1], 2)}, σ{" "}
                 {fmt(other.theta[3], 2)}) plus a narrow one at {fmt(other.theta[2], 2)} (σ{" "}
@@ -349,7 +361,7 @@ export default function InferencePage() {
                     params
                   </th>
                   <th scope="col" className="px-2 py-2.5 font-normal">
-                    ℓ
+                    <Ell />
                   </th>
                   <th scope="col" className="px-2 py-2.5 font-normal">
                     ΔAIC
@@ -441,9 +453,14 @@ export default function InferencePage() {
                 samples of 200 from the same recipe ({a.selection.model.options.restarts} starts per
                 K, plus {a.selection.model.options.pileStarts} pile starts wherever clipping piled
                 three or more ratings onto one value) shows how the criteria behave in general. BIC
-                almost always picks two components, with or without clipping; AIC overfits, and
-                clipping makes it worse. So BIC&apos;s K = {full.bestByBic} on the notebook&apos;s
-                sample is a property of this particular draw, not of the recipe.
+                picks two components in {selBic2.successes} of {selBic2.n} samples (Wilson{" "}
+                {pctInterval(selBic2, 0)}) and in {selBic2Clipped.successes} of {selBic2Clipped.n}{" "}
+                when clipped; otherwise it picks one component ({selBic1.successes} and{" "}
+                {selBic1Clipped.successes} times) or three ({selBic3.successes} and{" "}
+                {selBic3Clipped.successes}). AIC overfits: it picks two in only {selAic2.successes}{" "}
+                and {selAic2Clipped.successes} of {selAic2.n}, and clipping makes it worse. So
+                BIC&apos;s K = {full.bestByBic} on the notebook&apos;s sample is a property of this
+                particular draw, not of the recipe.
               </p>
             </div>
             <ScrollX label="How often each criterion picks each K" className="sheet p-1">
@@ -562,10 +579,14 @@ export default function InferencePage() {
             </div>
             <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="sheet p-4">
-                <dt className="text-sm text-muted-foreground">observed 2(ℓ₂ − ℓ₁)</dt>
+                <dt className="text-sm text-muted-foreground">
+                  observed 2(
+                  <Ell />₂ − <Ell />
+                  ₁)
+                </dt>
                 <dd className="num mt-1 text-2xl font-medium">{fmt(lrt.statistic, 2)}</dd>
                 <dd className="mt-1 text-xs text-muted-foreground">
-                  ℓ₁ = {fmt(lrt.ll1, 2)}, ℓ₂ = {fmt(lrt.ll2, 2)}
+                  <Ell />₁ = {fmt(lrt.ll1, 2)}, <Ell />₂ = {fmt(lrt.ll2, 2)}
                 </dd>
               </div>
               <div className="sheet p-4">
@@ -603,9 +624,15 @@ export default function InferencePage() {
                 DR-003
               </Link>
               ).
-              {other && other.logLikelihood > lrt.ll2 + 0.01
-                ? ` The ${lrt.options.restarts} starts on the observed data (plus ${lrt.options.pileStarts} pile starts) found ℓ₂ = ${fmt(lrt.ll2, 2)}, not the higher maximum at ${fmt(other.logLikelihood, 2)}, so the observed statistic, if anything, understates the evidence.`
-                : null}
+              {other && other.logLikelihood > lrt.ll2 + 0.01 ? (
+                <>
+                  {" "}
+                  The {lrt.options.restarts} starts on the observed data (plus{" "}
+                  {lrt.options.pileStarts} pile starts) found <Ell />₂ = {fmt(lrt.ll2, 2)}, not the
+                  higher maximum at {fmt(other.logLikelihood, 2)}, so the observed statistic, if
+                  anything, understates the evidence.
+                </>
+              ) : null}
             </p>
           </div>
         </Section>
@@ -614,12 +641,13 @@ export default function InferencePage() {
           <div className="prose-notebook">
             <p>
               {count(a.convergence.runs.length)} notebook-style random starts (μ ~ U(3, 8), σ ~
-              U(0.5, 2), π = 0.5) on the notebook&apos;s 200 ratings, each run until |Δℓ| &lt; 10⁻¹²
-              with its whole log-likelihood trace kept. The ascent property holds in every run. The
-              answer does depend on the start: most runs reach the maximum the notebook was heading
-              for, and a few find the narrow-component maximum with a higher likelihood. &ldquo;Keep
-              the best of many starts&rdquo; maximises the likelihood; here that means more starts
-              make the implausible answer more likely, not less.
+              U(0.5, 2), π = 0.5) on the notebook&apos;s 200 ratings, each run until |Δ
+              <Ell />| &lt; 10⁻¹² with its whole log-likelihood trace kept. The ascent property
+              holds in every run. The answer does depend on the start: most runs reach the maximum
+              the notebook was heading for, and a few find the narrow-component maximum with a
+              higher likelihood. &ldquo;Keep the best of many starts&rdquo; maximises the
+              likelihood; here that means more starts make the implausible answer more likely, not
+              less.
             </p>
           </div>
           <ConvergenceSection published={a.convergence} notebookIterations={toTol} />

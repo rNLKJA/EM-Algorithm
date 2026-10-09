@@ -29,8 +29,20 @@ export const nav = [
   { href: "/methods", label: "Methods", blurb: "Decisions and the model card" },
 ] as const;
 
+/**
+ * The git ref that links to the source point at. A deployment can pin it to the
+ * commit it was built from (`NEXT_PUBLIC_REPO_REF`, e.g. passed with
+ * `vercel deploy --build-env`), so files that are not on main yet still resolve;
+ * otherwise links follow main.
+ */
+export const repoRef = process.env.NEXT_PUBLIC_REPO_REF?.trim() || "main";
+
 export function repoFile(path: string): string {
-  return `${site.repo}/blob/main/${path}`;
+  return `${site.repo}/blob/${repoRef}/${path}`;
+}
+
+export function repoTree(path: string): string {
+  return `${site.repo}/tree/${repoRef}/${path}`;
 }
 
 /**

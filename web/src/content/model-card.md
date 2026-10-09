@@ -25,13 +25,15 @@ A model card for the statistical model at the centre of this project: the two-co
 | What | Result |
 | --- | --- |
 | Parity with the notebook | Every π, μ, σ and log-likelihood within 10⁻⁶ for all 15 iterations; console output identical |
-| Accuracy as the notebook reported it (15 iterations) | 90.5% (181 of 200), Wilson 95% CI 85.6% to 93.8% |
-| Accuracy of the converged fit (same start, 90 iterations to the notebook's tolerance) | 83.5% (167 of 200), Wilson 95% CI 77.7% to 88.0% |
+| Accuracy as the notebook reported it (15 iterations; in-sample) | 90.5% (181 of 200), Wilson 95% CI 85.6% to 93.8% |
+| Accuracy of the converged fit (same start, 90 iterations to the notebook's tolerance; in-sample) | 83.5% (167 of 200), Wilson 95% CI 77.7% to 88.0% |
 | Converged parameters (low-mean group first), with observed-information SEs | π₁ 0.221 (0.054), μ₁ 3.36 (0.27), μ₂ 7.02 (0.19), σ₁ 0.86 (0.18), σ₂ 1.46 (0.14) |
 | Parametric bootstrap 95% intervals (B = 1,000, seed 42) | π₁ 0.110 to 0.359; μ₁ 2.86 to 4.11; μ₂ 6.60 to 7.44; σ₁ 0.48 to 1.22; σ₂ 1.16 to 1.76 |
-| Coverage of nominal 95% intervals (simulated data sets of 200) | Wald intervals 84.4% to 91.2% depending on the parameter (500 data sets); percentile bootstrap 90.0% to 91.5% (200 data sets). On the same 200 data sets the bootstrap covered more often for π₁, μ₁ and σ₁ (paired 95% intervals exclude 0); for μ₂ and σ₂ the difference is within simulation noise, and the bootstrap intervals are wider for 4 of the 5 parameters |
+| Coverage of nominal 95% intervals (simulated data sets of 200) | Wald intervals 84.4% to 91.2% depending on the parameter (500 data sets); percentile bootstrap 90.0% to 91.5% (200 data sets, B = 200 per data set). On the same 200 data sets the bootstrap covered more often for π₁, μ₁ and σ₁ (paired 95% intervals exclude 0); for μ₂ and σ₂ the difference is within simulation noise, and the bootstrap intervals are wider for 4 of the 5 parameters |
 | Number of components | On this sample BIC prefers K = 3 and AIC K = 4. BIC's third component is the clipping pile (4.0% at 9.96, σ held at the 0.1 floor); at a floor of 0.25 BIC tips to K = 4 in a near-tie. Without the seven clipped ratings BIC prefers K = 2. On fresh samples from the recipe, clipped like the notebook, BIC picks K = 2 in 91 of 100 |
-| K = 1 vs K = 2 (parametric bootstrap LRT, B = 500) | 2Δℓ = 19.9, bootstrap p = 0.002 (none of 500 null statistics as large) |
+| K = 1 vs K = 2 (parametric bootstrap LRT, B = 500) | 2Δℓ = 19.9, bootstrap p = 0.002 (none of 500 null statistics as large). The LRT's 18 starts on the observed data found the notebook's maximum, ℓ₂ = −415.37; the best K = 2 maximum, ℓ = −413.99, would give 22.6, so the statistic understates the evidence; p is unchanged |
+
+Both accuracies are in-sample: the 200 ratings that are scored are the ones the model was fitted to. A Wilson interval treats the 200 classifications as independent trials of a fixed rule, so it reflects which users happened to be drawn given the fitted rule, not the uncertainty of the fit itself, and it is optimistic about accuracy on new ratings.
 
 All of these, with their seeds and settings, are on the site at /inference.
 
@@ -43,12 +45,13 @@ All of these, with their seeds and settings, are on the site at /inference.
 - **Unbounded likelihood.** A component can collapse onto one value; the clipped pile at 10.0 is a ready-made trap (DR-003).
 - **Misspecification.** The clipping is not modelled, so model-selection criteria add a component for the pile at 10, and how much that pile is worth depends on the variance floor.
 - **Over-confident intervals at n = 200.** Wald intervals cover only 84% to 91% of the time, not 95%; bootstrap intervals cover 90% to 92%, still short, and better than Wald by more than simulation noise for three of the five parameters only.
+- **Monte Carlo error in the bootstrap coverage study.** It uses B = 200 bootstrap replicates per data set for compute reasons, against the usual minimum of 1,000 for percentile intervals, so each endpoint rests on about the 5th and 195th of 200 values. That error is not quantified here, and the bootstrap coverage rates and the paired comparison with Wald could move with a larger B.
 
 ## Ethical considerations
 
 - The group names ("sci-fi lovers", "romance lovers") are illustrative labels from the original explainer. Real audiences do not split into two tidy types, and naming clusters after people can harden stereotypes.
 - A responsibility (the probability that a rating came from a component) is a statement about a model, not about a person. It should not be used to label or treat individuals.
-- The optional AI explanation feature sends only an iteration's numbers to a provider of the visitor's choosing, with the visitor's own key; see the AI use statement on /methods.
+- The optional AI explanation feature sends an iteration's numbers and a fixed description of the page and data set (no personal data) to a provider of the visitor's choosing, with the visitor's own key; see the AI use statement on /methods and DR-006.
 
 ## Caveats and recommendations
 

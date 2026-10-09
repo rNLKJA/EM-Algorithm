@@ -53,7 +53,24 @@ interface AnthropicMessage {
   content?: AnthropicContentBlock[];
   stop_reason?: string | null;
   stop_details?: { category?: string | null } | null;
-  usage?: { input_tokens?: number; output_tokens?: number };
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    /** one entry per model run; a fallback run is `fallback_message` */
+    iterations?: { type?: string }[] | null;
+  };
+}
+
+/**
+ * Did the server-side refusal fallback run? A `fallback` content block marks
+ * each switch point, and `usage.iterations` lists a `fallback_message` entry
+ * whenever a fallback model served the turn (including turns with no block).
+ */
+export function usedFallback(msg: AnthropicMessage): boolean {
+  return (
+    (msg.content ?? []).some((b) => b.type === "fallback") ||
+    (msg.usage?.iterations ?? []).some((i) => i?.type === "fallback_message")
+  );
 }
 
 export async function callAnthropic(req: StructuredRequest): Promise<ProviderResponse> {
@@ -93,8 +110,9 @@ export async function callAnthropic(req: StructuredRequest): Promise<ProviderRes
     msg.usage && typeof msg.usage.input_tokens === "number"
       ? { input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens ?? 0 }
       : null;
+  const fallback = usedFallback(msg);
   // these calls still cost tokens, so the reply and usage travel with the error
-  const details = { raw: text, usage, model };
+  const details = { raw: text, usage, model, fallback };
   if (msg.stop_reason === "refusal") {
     const category = msg.stop_details?.category;
     throw new AiError(
@@ -106,5 +124,5 @@ export async function callAnthropic(req: StructuredRequest): Promise<ProviderRes
   }
   if (msg.stop_reason === "max_tokens")
     throw new AiError("truncated", "The answer hit the token limit", undefined, details);
-  return { text, model, stopReason: msg.stop_reason ?? null, usage };
+  return { text, model, stopReason: msg.stop_reason ?? null, usage, fallback };
 }

@@ -5,13 +5,13 @@ import { Callout } from "@/components/common/callout";
 import { PageHeader } from "@/components/common/page-header";
 import { ScrollX } from "@/components/common/scroll-x";
 import { Markdown } from "@/components/methods/markdown";
-import { GROUNDING_SCOPE } from "@/lib/ai/explain-iteration";
+import { GROUNDING_SCOPE, SNAPSHOT_FIELDS } from "@/lib/ai/explain-iteration";
 import { ANTHROPIC_MODELS, OPENAI_DEFAULT_MODEL } from "@/lib/ai/models";
 import { loadDecisionRecords, loadModelCard } from "@/lib/content";
 import { notebookRun } from "@/lib/em/notebook-run";
 import { inference } from "@/lib/inference/results";
 import { INFERENCE_SETTINGS } from "@/lib/inference/settings";
-import { pageMetadata, repoFile, site } from "@/lib/site";
+import { pageMetadata, repoFile, repoTree, site } from "@/lib/site";
 import { wilsonInterval } from "@/lib/stats/intervals";
 
 export const metadata: Metadata = pageMetadata({
@@ -303,7 +303,10 @@ export default function MethodsPage() {
             <li>
               One synthetic data set of 200 ratings. Its accuracy, {pct(acc.estimate)} as the
               notebook reported it, has a Wilson 95% interval of {pct(acc.lower)} to{" "}
-              {pct(acc.upper)}; the converged fit&apos;s is lower (see the model card).
+              {pct(acc.upper)}; the converged fit&apos;s is lower (see the model card). Both are
+              in-sample: the same ratings fitted the model, so the interval reflects which users
+              happened to be drawn given the fitted rule, not the uncertainty of the fit itself, and
+              it is optimistic about accuracy on new ratings.
             </li>
             <li>
               At n = 200 the nominal 95% intervals cover the truth less often than 95%: Wald
@@ -318,6 +321,16 @@ export default function MethodsPage() {
                 0,
               )}
               .
+            </li>
+            <li>
+              The bootstrap coverage study uses B = {s.bootstrapCoverage.B} bootstrap replicates per
+              data set ({s.bootstrapCoverage.S} data sets) to keep the compute manageable, where B =
+              1,000 is the usual minimum for percentile intervals. Each 2.5% and 97.5% endpoint then
+              rests on about the {Math.round(0.025 * s.bootstrapCoverage.B)}th and{" "}
+              {Math.round(0.975 * s.bootstrapCoverage.B)}th of {s.bootstrapCoverage.B} values, so
+              the endpoints carry Monte Carlo error that this study does not quantify, and the
+              bootstrap coverage rates and the paired bootstrap-against-Wald differences could move
+              with a larger B.
             </li>
             <li>
               The model ignores clipping, so the pile of ratings at 10.0 can be
@@ -364,7 +377,7 @@ export default function MethodsPage() {
             Each record states the decision first, then the options, the reasons, what actually
             happened (weak numbers included) and what I would change. Records are never edited after
             the fact; a new record supersedes an old one. The sources are in{" "}
-            <a className="link" href={`${site.repo}/tree/main/docs/decisions`}>
+            <a className="link" href={repoTree("docs/decisions")}>
               docs/decisions
             </a>
             .
@@ -427,15 +440,28 @@ export default function MethodsPage() {
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 One optional feature, &ldquo;Explain this iteration&rdquo; on the stepper and the
                 playground, writes a short plain-language reading of the EM iteration on screen. It
-                is off until a visitor adds their own API key, and nothing else on the site uses AI.
-                The analysis, the numbers and every other text on the site were written without it.
+                is off until a visitor adds their own API key, and nothing else on the site calls an
+                AI model while you use it.
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Building the site is a different matter: its code and text were written with an AI
+                coding assistant (Claude Code), as the{" "}
+                <a className="link" href={`${site.repo}/commits`}>
+                  commit history
+                </a>{" "}
+                shows. Every number on the site comes from the code, the tests and the seeded
+                scripts, not from a language model, and the 2025 coursework in{" "}
+                <span className="num">original/</span> is kept as it was.
               </p>
             </div>
             <div className="sheet p-5">
               <h3 className="text-lg font-semibold">What it never does</h3>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
                 <li>It never computes or changes any number shown on the site.</li>
-                <li>It never sees anything except the iteration&apos;s numbers listed below.</li>
+                <li>
+                  It never sees anything except this iteration&apos;s numbers and the fixed
+                  description of the page and data set listed below. No personal data is sent.
+                </li>
                 <li>
                   It never runs without a click, and never with a key belonging to this site (there
                   is none).
@@ -446,14 +472,20 @@ export default function MethodsPage() {
             <div className="sheet p-5">
               <h3 className="text-lg font-semibold">What is sent, and where</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                A fixed system prompt and a JSON snapshot: the parameters before and after the
-                iteration, the responsibilities (all four ratings in the stepper; shares, counts and
-                five sample ratings in the playground), the log-likelihood before and after, and the
-                stopping rule. It goes straight from the browser to the provider the visitor chose:
-                Anthropic (default {ANTHROPIC_MODELS[0].label}, or {ANTHROPIC_MODELS[1].label}) or
-                OpenAI (default {OPENAI_DEFAULT_MODEL}, editable). The key is kept in the
-                browser&apos;s session storage, or local storage if the visitor asks, and travels
-                only in the request header.
+                A fixed system prompt and a JSON snapshot with these fields and no others (a test
+                checks the snapshot against this list):
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                {SNAPSHOT_FIELDS.map((f) => (
+                  <li key={f.keys.join()}>{f.what}</li>
+                ))}
+              </ul>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                It goes straight from the browser to the provider the visitor chose: Anthropic
+                (default {ANTHROPIC_MODELS[0].label}, or {ANTHROPIC_MODELS[1].label}) or OpenAI
+                (default {OPENAI_DEFAULT_MODEL}, editable). The key is kept in the browser&apos;s
+                session storage, or local storage if the visitor asks, and travels only in the
+                request header.
               </p>
             </div>
             <div className="sheet p-5">
@@ -463,12 +495,13 @@ export default function MethodsPage() {
                 grounding check lists any number in it that was not in the snapshot; it checks{" "}
                 {GROUNDING_SCOPE}. The visitor accepts, edits or rejects each explanation, and every
                 call is written without the key to an audit log in the browser&apos;s IndexedDB:
-                time, feature, provider, model, input, output, latency, token usage and the
-                decision. Failed calls are recorded too, and a refusal, a cut-off reply or one that
-                failed validation keeps whatever the provider sent back and its token usage. On{" "}
-                {ANTHROPIC_MODELS[1].label} a declined request is retried by Anthropic&apos;s
-                server-side fallback within the same call, and the log shows which model answered.
-                View or export it on the{" "}
+                time, feature, provider, the model asked and the model that answered, input, output,
+                latency, token usage and the decision. Failed calls are recorded too, and a refusal,
+                a cut-off reply or one that failed validation keeps whatever the provider sent back
+                and its token usage. On {ANTHROPIC_MODELS[1].label} a declined request is retried by
+                Anthropic&apos;s server-side fallback within the same call; the log records the
+                model that was asked, the model that answered and whether the fallback ran. View or
+                export it on the{" "}
                 <Link className="link" href="/ai-log">
                   AI audit log
                 </Link>
@@ -481,7 +514,7 @@ export default function MethodsPage() {
             use of AI in government (transparency statements, human oversight), the EU AI Act&apos;s
             transparency principles (people should know when content is AI-generated) and the NIST
             AI Risk Management Framework (measure and manage, with records). It is not a claim of
-            compliance with any of them. See DR-005 above for the trade-offs.
+            compliance with any of them. See DR-005 and DR-006 above for the trade-offs.
           </Callout>
         </Section>
       </div>

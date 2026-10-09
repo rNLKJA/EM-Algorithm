@@ -194,6 +194,43 @@ export interface IterationSnapshot {
   notes: string[];
 }
 
+/**
+ * Everything the snapshot can contain, in plain words. /methods prints this list
+ * as "what is sent", and a test checks that every field a real snapshot carries
+ * is on it, so the disclosure cannot drift from the code.
+ */
+export const SNAPSHOT_FIELDS: readonly {
+  keys: readonly (keyof IterationSnapshot)[];
+  what: string;
+}[] = [
+  { keys: ["page"], what: "the page name (stepper or playground)" },
+  {
+    keys: ["dataset", "n"],
+    what: "a one-line description of the data set (the notebook's synthetic ratings, or ratings generated in the browser with their seed) and its size",
+  },
+  {
+    keys: ["iteration", "stage_on_screen"],
+    what: "the iteration number and, on the stepper, which half of it is on screen",
+  },
+  {
+    keys: ["parameters_before", "parameters_after"],
+    what: "the shares, means and spreads before and after the iteration",
+  },
+  {
+    keys: ["responsibilities", "responsibility_summary"],
+    what: "the responsibilities: all four ratings' on the stepper; shares, counts and five sample ratings' on the playground",
+  },
+  {
+    keys: ["log_likelihood_before", "log_likelihood_after", "log_likelihood_change"],
+    what: "the log-likelihood before and after, and the change",
+  },
+  {
+    keys: ["stopping_rule"],
+    what: "the stopping rule: tolerance, iteration cap and the run's status",
+  },
+  { keys: ["notes"], what: "fixed notes on how to read these numbers" },
+];
+
 /** Every rating's responsibilities when there are few; a summary otherwise. */
 export const LIST_ALL_BELOW = 13;
 

@@ -29,6 +29,8 @@ export interface StructuredResult<T> {
   raw: string;
   model: string;
   usage: TokenUsage | null;
+  /** whether Anthropic's server-side refusal fallback answered instead of `call.model` */
+  fallback: boolean;
   latencyMs: number;
 }
 
@@ -76,8 +78,20 @@ export async function generateStructured<T>(call: StructuredCall<T>): Promise<St
   } catch (e) {
     // the reply arrived and cost tokens: keep it for the audit log
     if (e instanceof AiError)
-      throw e.withDetails({ raw: res.text, usage: res.usage, model: res.model });
+      throw e.withDetails({
+        raw: res.text,
+        usage: res.usage,
+        model: res.model,
+        fallback: res.fallback,
+      });
     throw e;
   }
-  return { data, raw: res.text, model: res.model, usage: res.usage, latencyMs };
+  return {
+    data,
+    raw: res.text,
+    model: res.model,
+    usage: res.usage,
+    fallback: res.fallback,
+    latencyMs,
+  };
 }

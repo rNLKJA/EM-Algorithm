@@ -97,7 +97,11 @@ export function RerunBar({
             type="button"
             size="sm"
             variant="ghost"
-            onClick={onReset}
+            onClick={() => {
+              // back to the published result, and to the seed that produced it
+              setDraft(String(publishedSeed));
+              onReset();
+            }}
             className="rounded-full"
           >
             <RotateCcw data-icon="inline-start" aria-hidden /> Published

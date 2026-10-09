@@ -186,7 +186,9 @@ export function Results({
                 : " Here they agree."}{" "}
               Responsibilities are taken from the E-step of iteration {Math.max(1, stage)}, like the
               notebook&apos;s <span className="num">em.gamma1</span>. The intervals are Wilson 95%
-              intervals over the {gamma1.length} ratings.
+              intervals over the {gamma1.length} ratings. This is in-sample accuracy: the same
+              ratings fitted the model, so an interval reflects which users happened to be drawn
+              given the fitted rule, not the uncertainty of the fit itself.
             </p>
           )}
         </section>

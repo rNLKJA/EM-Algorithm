@@ -28,6 +28,11 @@ export interface ProviderResponse {
   model: string;
   usage: TokenUsage | null;
   stopReason: string | null;
+  /**
+   * True when Anthropic's server-side refusal fallback ran: the requested model
+   * declined and another model answered within the same call.
+   */
+  fallback: boolean;
 }
 
 /** A provider-agnostic request for one JSON object matching `schema`. */

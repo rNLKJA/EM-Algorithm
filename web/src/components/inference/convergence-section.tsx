@@ -1,5 +1,6 @@
 "use client";
 
+import { Ell } from "@/components/common/ell";
 import { ScrollX } from "@/components/common/scroll-x";
 import type { ConvergenceSummary } from "@/lib/inference/tasks";
 import { count, fmt, pct, pctInterval } from "./format";
@@ -65,7 +66,8 @@ export function ConvergenceSection({
           <dd className="mt-1 text-xs text-muted-foreground">
             {optima.map((o, i) => (
               <span key={o.id} className="num">
-                {i > 0 ? "; " : ""}ℓ = {fmt(o.logLikelihood)} ({o.count} start
+                {i > 0 ? "; " : ""}
+                <Ell /> = {fmt(o.logLikelihood)} ({o.count} start
                 {o.count === 1 ? "" : "s"})
               </span>
             ))}
@@ -103,20 +105,26 @@ export function ConvergenceSection({
               .join("; ")}.`}
           />
           <p className="num mt-2 text-xs text-muted-foreground">
-            {c.options.tolerances
-              .map(
-                (t, i) =>
-                  `|Δℓ| < ${TOL_LABEL(t)}: median ${round(c.iterations[i].median)} (IQR ${Math.round(c.iterations[i].q1)} to ${Math.round(c.iterations[i].q3)})`,
-              )
-              .join(" · ")}
+            {c.options.tolerances.map((t, i) => (
+              <span key={t}>
+                {i > 0 ? " · " : ""}|Δ
+                <Ell />| &lt; {TOL_LABEL(t)}: median {round(c.iterations[i].median)} (IQR{" "}
+                {Math.round(c.iterations[i].q1)} to {Math.round(c.iterations[i].q3)})
+              </span>
+            ))}
           </p>
         </div>
         <div className="sheet p-4 sm:p-5">
           <h3 className="text-base font-semibold">Best of R random starts</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Chance that at least one of R starts reaches the higher maximum
-            {best ? ` (ℓ = ${fmt(best.logLikelihood)})` : ""}, from the single-start rate and its
-            Wilson interval.
+            {best ? (
+              <>
+                {" "}
+                (<Ell /> = {fmt(best.logLikelihood)})
+              </>
+            ) : null}
+            , from the single-start rate and its Wilson interval.
           </p>
           <ScrollX label="Best of R" className="mt-3">
             <table className="num w-full text-sm">

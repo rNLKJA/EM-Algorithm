@@ -4,7 +4,8 @@
  * The site is static, so the log lives in the visitor's IndexedDB (database
  * `emlab-ai-audit`). Each entry records what was sent (system prompt and the
  * numbers of the iteration, never the key), what came back, which provider and model
- * answered, how long it took, the token usage the provider reported, and the
+ * were asked and which model answered (they differ when Anthropic's server-side
+ * refusal fallback ran), how long it took, the token usage the provider reported, and the
  * human decision taken afterwards (accepted / edited / rejected). Entries can
  * be exported as JSON or CSV from /ai-log.
  */
@@ -19,7 +20,15 @@ export interface AuditEntry {
   timestamp: string;
   feature: string;
   provider: Provider;
+  /** The model that answered, as the provider reported it. */
   model: string;
+  /**
+   * The model that was asked (optional: entries written before this field
+   * existed only have `model`).
+   */
+  requested_model?: string;
+  /** True when Anthropic's server-side refusal fallback answered instead of the requested model. */
+  fallback?: boolean;
   input: { system: string; user: string };
   /** Raw model output (null when the call failed before a reply arrived). */
   output: string | null;
@@ -70,6 +79,7 @@ export function sanitiseEntry(entry: AuditEntry, knownKey?: string | null): Audi
     ...entry,
     feature: r(entry.feature),
     model: r(entry.model),
+    requested_model: entry.requested_model === undefined ? undefined : r(entry.requested_model),
     input: { system: r(entry.input.system), user: r(entry.input.user) },
     output: entry.output === null ? null : r(entry.output),
     error: entry.error ? { kind: r(entry.error.kind), message: r(entry.error.message) } : undefined,
@@ -105,7 +115,9 @@ export const CSV_COLUMNS = [
   "timestamp",
   "feature",
   "provider",
+  "requested_model",
   "model",
+  "fallback",
   "status",
   "latency_ms",
   "input_tokens",
@@ -136,7 +148,9 @@ export function toCsv(entries: AuditEntry[]): string {
       e.timestamp,
       e.feature,
       e.provider,
+      e.requested_model,
       e.model,
+      e.fallback === undefined ? undefined : String(e.fallback),
       e.status,
       e.latency_ms,
       e.usage?.input_tokens,

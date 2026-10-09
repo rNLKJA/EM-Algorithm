@@ -32,6 +32,8 @@ export interface AiErrorDetails {
   usage?: TokenUsage | null;
   /** model id reported by the provider */
   model?: string;
+  /** whether Anthropic's server-side refusal fallback ran on this call */
+  fallback?: boolean;
 }
 
 export class AiError extends Error {
@@ -40,6 +42,7 @@ export class AiError extends Error {
   readonly raw?: string;
   readonly usage?: TokenUsage | null;
   readonly model?: string;
+  readonly fallback?: boolean;
 
   constructor(kind: AiErrorKind, message: string, status?: number, details: AiErrorDetails = {}) {
     super(message);
@@ -49,6 +52,7 @@ export class AiError extends Error {
     this.raw = details.raw;
     this.usage = details.usage;
     this.model = details.model;
+    this.fallback = details.fallback;
   }
 
   /** The same error with the provider's reply attached. */
@@ -57,6 +61,7 @@ export class AiError extends Error {
       raw: details.raw ?? this.raw,
       usage: details.usage ?? this.usage,
       model: details.model ?? this.model,
+      fallback: details.fallback ?? this.fallback,
     });
   }
 

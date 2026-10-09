@@ -167,7 +167,7 @@ export function LrtPlot({
           className="fill-muted-foreground text-[10.5px]"
           aria-hidden
         >
-          2(ℓ₂ − ℓ₁)
+          2(<tspan className="ell">ℓ</tspan>₂ − <tspan className="ell">ℓ</tspan>₁)
         </text>
       </svg>
     </div>

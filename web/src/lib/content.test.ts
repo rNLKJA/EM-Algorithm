@@ -23,7 +23,14 @@ describe("docs content", () => {
 
   it("every decision record has the required sections, in order", () => {
     const records = loadDecisionRecords();
-    expect(records.map((r) => r.id)).toEqual(["DR-001", "DR-002", "DR-003", "DR-004", "DR-005"]);
+    expect(records.map((r) => r.id)).toEqual([
+      "DR-001",
+      "DR-002",
+      "DR-003",
+      "DR-004",
+      "DR-005",
+      "DR-006",
+    ]);
     for (const r of records) {
       expect(r.summary.length).toBeGreaterThan(20);
       const order = [

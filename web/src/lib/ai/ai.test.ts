@@ -15,6 +15,7 @@ import {
   buildAnthropicHeaders,
   callAnthropic,
   FALLBACK_BETA,
+  usedFallback,
 } from "./anthropic";
 import {
   createBrowserAuditStore,
@@ -38,6 +39,7 @@ import {
   findUngroundedNumbers,
   forDisplay,
   normaliseScientific,
+  SNAPSHOT_FIELDS,
 } from "./explain-iteration";
 import { createKeyStore, normaliseSettings, type StorageLike } from "./key-store";
 import { anthropicSupportsEffort, DEFAULT_SETTINGS, isValidModelId } from "./models";
@@ -170,6 +172,65 @@ describe("Anthropic adapter", () => {
     expect(cut.kind).toBe("truncated");
     expect(cut.raw).toBe('{"headline": "The gro');
     expect(cut.usage?.output_tokens).toBe(4000);
+  });
+
+  it("records when the server-side fallback answered instead of the requested model", async () => {
+    const call = (body: unknown) =>
+      callAnthropic(
+        baseReq({
+          model: "claude-sonnet-5-5",
+          fetchImpl: (async () => jsonResponse(body)) as unknown as typeof fetch,
+        }),
+      );
+    // a switch point in the content, and the fallback run in usage.iterations
+    const rescued = await call({
+      model: "claude-opus-5-5",
+      content: [
+        {
+          type: "fallback",
+          from: { model: "claude-sonnet-5-5" },
+          to: { model: "claude-opus-5-5" },
+        },
+        { type: "text", text: JSON.stringify(explanation) },
+      ],
+      stop_reason: "end_turn",
+      usage: {
+        input_tokens: 900,
+        output_tokens: 200,
+        iterations: [{ type: "message" }, { type: "fallback_message" }],
+      },
+    });
+    expect(rescued.fallback).toBe(true);
+    expect(rescued.model).toBe("claude-opus-5-5");
+    expect(rescued.text).toBe(JSON.stringify(explanation)); // the fallback block is not text
+    // a sticky turn carries no block, only the usage entry
+    expect(
+      usedFallback({ content: [], usage: { iterations: [{ type: "fallback_message" }] } }),
+    ).toBe(true);
+    // an ordinary reply
+    const plain = await call({
+      model: "claude-sonnet-5-5",
+      content: [{ type: "text", text: JSON.stringify(explanation) }],
+      stop_reason: "end_turn",
+      usage: { input_tokens: 900, output_tokens: 200, iterations: [{ type: "message" }] },
+    });
+    expect(plain.fallback).toBe(false);
+    // the fallback model can decline too: the error keeps the flag for the audit log
+    const refused = await call({
+      model: "claude-opus-5-5",
+      content: [
+        {
+          type: "fallback",
+          from: { model: "claude-sonnet-5-5" },
+          to: { model: "claude-opus-5-5" },
+        },
+      ],
+      stop_reason: "refusal",
+      usage: { input_tokens: 900, output_tokens: 3, iterations: [{ type: "fallback_message" }] },
+    }).catch((e: AiError) => e);
+    expect(refused).toBeInstanceOf(AiError);
+    expect((refused as AiError).fallback).toBe(true);
+    expect((refused as AiError).model).toBe("claude-opus-5-5");
   });
 
   it("reports network/CORS failures and cancellations", async () => {
@@ -441,6 +502,20 @@ describe("audit log", () => {
     ]);
     const [header, row] = csv.trim().split("\r\n");
     expect(header.split(",")).toContain("latency_ms");
+    // which model was asked, which answered, and whether the fallback ran
+    expect(header.split(",").slice(3, 7)).toEqual([
+      "provider",
+      "requested_model",
+      "model",
+      "fallback",
+    ]);
+    const fb = toCsv([
+      entry({ requested_model: "claude-sonnet-5-5", model: "claude-opus-5-5", fallback: true }),
+    ])
+      .trim()
+      .split("\r\n")[1]
+      .split(",");
+    expect(fb.slice(3, 7)).toEqual(["anthropic", "claude-sonnet-5-5", "claude-opus-5-5", "true"]);
     expect(row).toContain(`"'=HYPERLINK(""x"")"`);
     expect(row).toContain('"a,b"');
     expect(JSON.parse(toJson([entry()])).entries).toHaveLength(1);
@@ -520,6 +595,27 @@ describe("explain this iteration", () => {
     expect(s.share_component1 + s.share_component2).toBeCloseTo(1, 3);
     expect(s.gamma1_at_rating).toHaveLength(5);
     expect(JSON.stringify(big).length).toBeLessThan(4000);
+  });
+
+  it("sends only the fields the AI use statement on /methods lists", () => {
+    const p = notebookRun.init;
+    const playground = buildIterationSnapshot({
+      source: "playground",
+      dataset: "notebook",
+      data: notebookRun.ratings,
+      iteration: 1,
+      before: p,
+      after: notebookRun.iterations[0].params,
+      e: eStep(notebookRun.ratings, p),
+      logLikelihoodBefore: logLikelihood(notebookRun.ratings, p),
+      logLikelihoodAfter: notebookRun.iterations[0].logLikelihood,
+      stopping: { tolerance: 1e-4, maxIterations: 15, status: "collapsed" },
+    });
+    const listed = new Set<string>(SNAPSHOT_FIELDS.flatMap((f) => f.keys));
+    const sent = new Set([...Object.keys(snapshot), ...Object.keys(playground)]);
+    expect([...sent].filter((k) => !listed.has(k))).toEqual([]);
+    // and the list has nothing that is never sent
+    expect([...listed].filter((k) => !sent.has(k))).toEqual([]);
   });
 
   it("flags numbers that are not in the snapshot", () => {

@@ -85,5 +85,5 @@ export async function callOpenAi(req: StructuredRequest): Promise<ProviderRespon
       usage,
       model,
     });
-  return { text, model, stopReason: choice?.finish_reason ?? null, usage };
+  return { text, model, stopReason: choice?.finish_reason ?? null, usage, fallback: false };
 }
