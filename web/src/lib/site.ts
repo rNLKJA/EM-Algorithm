@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
 
+export const DEFAULT_SITE_URL = "https://em-algorithm-lab.vercel.app";
+
+/**
+ * The canonical and Open Graph base URL. An unset or blank NEXT_PUBLIC_SITE_URL
+ * (a copied .env.example leaves it empty) means the production domain; anything
+ * else is used as given, so a malformed value still fails the build loudly in
+ * `new URL()` rather than being ignored.
+ */
+export function resolveSiteUrl(raw: string | undefined): string {
+  return raw?.trim() || DEFAULT_SITE_URL;
+}
+
 export const site = {
   name: "EM, one step at a time",
   shortName: "EM Lab",
@@ -8,7 +20,7 @@ export const site = {
   repo: "https://github.com/rNLKJA/EM-Algorithm",
   author: "Sunchuangyu (Rin) Huang",
   authorGithub: "https://github.com/rNLKJA",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://em-algorithm-lab.vercel.app",
+  url: resolveSiteUrl(process.env.NEXT_PUBLIC_SITE_URL),
 } as const;
 
 /** The social card served by app/opengraph-image.tsx (alt text kept in sync there). */
