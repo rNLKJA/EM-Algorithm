@@ -257,7 +257,7 @@ export function Results({
                   <td className="py-1 pr-3">{it.iteration}</td>
                   <td className="py-1 pr-3">{it.logLikelihood.toFixed(4)}</td>
                   <td className="py-1 pr-3">
-                    {it.improvement === null ? "" : it.improvement.toFixed(5)}
+                    {it.improvement === null ? "" : smart(it.improvement, 5)}
                   </td>
                   {(["pi1", "mu1", "mu2", "sigma1", "sigma2"] as const).map((k) => (
                     <td key={k} className="py-1 pr-3">

@@ -2,6 +2,7 @@
 
 import { Ell } from "@/components/common/ell";
 import { ScrollX } from "@/components/common/scroll-x";
+import { sci } from "@/lib/format";
 import type { ConvergenceSummary } from "@/lib/inference/tasks";
 import { count, fmt, pct, pctInterval } from "./format";
 import { IterationBoxes } from "./iteration-boxes";
@@ -69,8 +70,7 @@ export function ConvergenceSection({
             {c.monotoneRuns}/{c.runs.length}
           </dd>
           <dd className="mt-1 text-xs text-muted-foreground">
-            runs; largest single drop{" "}
-            {c.worstDecrease === 0 ? "0" : c.worstDecrease.toExponential(1)}
+            runs; largest single drop {sci(c.worstDecrease, 1)}
           </dd>
         </div>
         <div className="sheet p-4">

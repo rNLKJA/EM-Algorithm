@@ -20,7 +20,7 @@ import { degenerateStatus, type IterationInput } from "@/lib/ai/explain-iteratio
 import { ratingAxis } from "@/lib/charts/axes";
 import { diagnoseFit } from "@/lib/em/diagnose";
 import { eStep, isNonDecreasing, logLikelihood, paramsAt } from "@/lib/em/em";
-import { pyFixed, sci } from "@/lib/format";
+import { sci, smart } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Results } from "./results";
 import {
@@ -108,7 +108,8 @@ export function Playground() {
       const size = sigma > 0 ? `shrank to ${sci(sigma, 1)}` : "hit 0";
       return `Collapsed at iteration ${n}: component ${k}'s σ ${size}, a spike whose likelihood grows without bound (σ → 0). Not a fit: EM stops here. Try another start or a variance floor.`;
     }
-    return `Stopped at the cap of ${n} iterations, still improving by ${pyFixed(last.improvement ?? 0, 4)} per step (not converged).`;
+    // below 10⁻⁴ fixed notation would print "0.0000" for a run that is still moving
+    return `Stopped at the cap of ${n} iterations, still improving by ${smart(last.improvement ?? 0, 4)} per step (not converged).`;
   })();
 
   const componentLabels: [string, string] = ["component 1", "component 2"];
