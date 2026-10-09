@@ -1,0 +1,9 @@
+# `vercel deploy` uploads this directory and does not read .gitignore; Vercel's
+# defaults (node_modules, .next, .vercel, .git, ...) still apply on top of this.
+# Local-only output: the showcase tour's raw recordings (about 1 GB) and test caches.
+.showcase
+.playwright
+test-results
+playwright-report
+.vitest
+*.tsbuildinfo
