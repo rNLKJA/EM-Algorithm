@@ -18,9 +18,11 @@ import {
   usedFallback,
 } from "./anthropic";
 import {
+  closeUndecided,
   createBrowserAuditStore,
   createIndexedDbAuditStore,
   createMemoryAuditStore,
+  localDateStamp,
   sanitiseEntry,
   toCsv,
   toJson,
@@ -536,6 +538,29 @@ describe("audit log", () => {
       await store.clear();
       expect(await store.list()).toHaveLength(0);
     }
+  });
+
+  it("closes an undecided explanation as superseded or abandoned instead of leaving it pending", async () => {
+    for (const store of [createMemoryAuditStore(), createIndexedDbAuditStore(new IDBFactory())]) {
+      await store.add(entry({ decision: "pending" }));
+      await store.add(entry({ id: "e2", decision: "pending" }));
+      const at = new Date("2026-10-09T18:23:00.000Z");
+      const superseded = await closeUndecided(store, "e1", "superseded", at);
+      expect(superseded?.decision).toBe("superseded");
+      expect(superseded?.decided_at).toBe("2026-10-09T18:23:00.000Z");
+      expect((await closeUndecided(store, "e2", "abandoned"))?.decision).toBe("abandoned");
+      const csv = toCsv(await store.list());
+      expect(csv).toContain(",superseded,");
+      expect(csv).toContain(",abandoned,");
+      expect(await closeUndecided(store, "missing", "abandoned")).toBeNull();
+    }
+  });
+
+  it("names export files by the local date, not the UTC one", () => {
+    // 4:53 am on 10 October in Adelaide is still 9 October in UTC
+    const local = new Date(2026, 9, 10, 4, 53);
+    expect(localDateStamp(local)).toBe("2026-10-10");
+    expect(localDateStamp(new Date(2026, 0, 5, 0, 0))).toBe("2026-01-05");
   });
 
   it("falls back to memory when IndexedDB is unavailable", async () => {

@@ -3,7 +3,14 @@
 import { Download, Trash2 } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { type AuditEntry, auditStore, onAuditLogChange, toCsv, toJson } from "@/lib/ai/audit-log";
+import {
+  type AuditEntry,
+  auditStore,
+  localDateStamp,
+  onAuditLogChange,
+  toCsv,
+  toJson,
+} from "@/lib/ai/audit-log";
 import { modelLabel, PROVIDER_LABEL } from "@/lib/ai/models";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +35,15 @@ const DECISION_STYLE: Record<AuditEntry["decision"], string> = {
   accepted: "border-ok/50 text-ok",
   edited: "border-comp-1/50 text-comp-1-ink",
   rejected: "border-destructive/45 text-destructive",
+  superseded: "border-border text-muted-foreground",
+  abandoned: "border-border text-muted-foreground",
   not_applicable: "border-border text-muted-foreground",
+};
+
+const DECISION_LABEL: Partial<Record<AuditEntry["decision"], string>> = {
+  superseded: "no decision (asked again)",
+  abandoned: "no decision (left the page)",
+  not_applicable: "no decision (failed)",
 };
 
 export function AuditLogView() {
@@ -64,7 +79,6 @@ export function AuditLogView() {
     );
 
   const { entries } = state;
-  const stamp = new Date().toISOString().slice(0, 10);
   const memoryOnly = auditStore().persistence() === "memory";
   const totals = entries.reduce(
     (t, e) => ({
@@ -93,7 +107,7 @@ export function AuditLogView() {
             variant="outline"
             disabled={!entries.length}
             onClick={() =>
-              download(`ai-audit-log-${stamp}.json`, "application/json", toJson(entries))
+              download(`ai-audit-log-${localDateStamp()}.json`, "application/json", toJson(entries))
             }
             className="rounded-full"
           >
@@ -103,7 +117,11 @@ export function AuditLogView() {
             variant="outline"
             disabled={!entries.length}
             onClick={() =>
-              download(`ai-audit-log-${stamp}.csv`, "text/csv;charset=utf-8", toCsv(entries))
+              download(
+                `ai-audit-log-${localDateStamp()}.csv`,
+                "text/csv;charset=utf-8",
+                toCsv(entries),
+              )
             }
             className="rounded-full"
           >
@@ -193,7 +211,7 @@ export function AuditLogView() {
                       DECISION_STYLE[e.decision],
                     )}
                   >
-                    {e.decision === "not_applicable" ? "no decision (failed)" : e.decision}
+                    {DECISION_LABEL[e.decision] ?? e.decision}
                   </span>
                 </div>
                 <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
@@ -244,6 +262,16 @@ export function AuditLogView() {
                       >
                         {e.status === "ok" ? prettyJson(e.output) : e.error?.message}
                       </LogBlock>
+                      {e.status !== "ok" && e.output ? (
+                        <>
+                          <p className="eyebrow mt-3 mb-1">
+                            Reply received (AI-generated, discarded)
+                          </p>
+                          <LogBlock label={`Reply received and discarded, call of ${when}`}>
+                            {prettyJson(e.output)}
+                          </LogBlock>
+                        </>
+                      ) : null}
                       {e.edited_output ? (
                         <>
                           <p className="eyebrow mt-3 mb-1">Your edited version</p>

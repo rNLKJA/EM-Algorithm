@@ -6,13 +6,40 @@
  * numbers of the iteration, never the key), what came back, which provider and model
  * were asked and which model answered (they differ when Anthropic's server-side
  * refusal fallback ran), how long it took, the token usage the provider reported, and the
- * human decision taken afterwards (accepted / edited / rejected). Entries can
- * be exported as JSON or CSV from /ai-log.
+ * human decision taken afterwards (accepted / edited / rejected, or superseded /
+ * abandoned when the visitor asked again or left without deciding). Entries
+ * can be exported as JSON or CSV from /ai-log.
  */
 import { redactSecrets } from "./redact";
 import type { Provider, TokenUsage } from "./types";
 
-export type HumanDecision = "pending" | "accepted" | "edited" | "rejected" | "not_applicable";
+export type HumanDecision =
+  | "pending"
+  | "accepted"
+  | "edited"
+  | "rejected"
+  /** the visitor asked again before deciding, so this explanation was replaced */
+  | "superseded"
+  /** the panel closed (the visitor left the page) before a decision */
+  | "abandoned"
+  /** the call failed, so there was nothing to decide on */
+  | "not_applicable";
+
+/** How an explanation left without a human decision is closed in the log. */
+export type UndecidedOutcome = Extract<HumanDecision, "superseded" | "abandoned">;
+
+/**
+ * Close an entry that will never get a human decision, so the log does not
+ * show it as pending forever. Callers only pass entries still pending.
+ */
+export function closeUndecided(
+  store: Pick<AuditStore, "update">,
+  id: string,
+  outcome: UndecidedOutcome,
+  now: Date = new Date(),
+): Promise<AuditEntry | null> {
+  return store.update(id, { decision: outcome, decided_at: now.toISOString() });
+}
 
 export interface AuditEntry {
   id: string;
@@ -169,6 +196,16 @@ export function toCsv(entries: AuditEntry[]): string {
       .join(","),
   );
   return [CSV_COLUMNS.join(","), ...rows].join("\r\n") + "\r\n";
+}
+
+/**
+ * The date for export file names, in the visitor's time zone (the log shows
+ * local times), as YYYY-MM-DD. Called at click time, so a page left open past
+ * midnight still names the file by the day it was exported.
+ */
+export function localDateStamp(d: Date = new Date()): string {
+  const p = (v: number) => String(v).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 export function toJson(entries: AuditEntry[]): string {

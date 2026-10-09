@@ -2,10 +2,16 @@
 
 import { Check, KeyRound, Loader2, Pencil, Sparkles, X } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { openAiSettings, useAiSettings } from "@/hooks/use-ai-settings";
-import { auditStore, newEntryId, sanitiseEntry, type AuditEntry } from "@/lib/ai/audit-log";
+import {
+  auditStore,
+  closeUndecided,
+  newEntryId,
+  sanitiseEntry,
+  type AuditEntry,
+} from "@/lib/ai/audit-log";
 import { generateStructured } from "@/lib/ai/client";
 import { AiError, describeAiError } from "@/lib/ai/errors";
 import {
@@ -75,7 +81,23 @@ export function ExplainIteration({
   const [draft, setDraft] = useState("");
   const [auditNotice, setAuditNotice] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // the explanation on screen, for code that runs after a render (a reply arriving, unmount)
+  const resultRef = useRef<Result | null>(null);
   const stale = result !== null && result.context !== context;
+
+  useEffect(() => {
+    resultRef.current = result;
+  }, [result]);
+
+  // leaving with an explanation still undecided closes it in the log, so it is not "pending" forever
+  useEffect(
+    () => () => {
+      const open = resultRef.current;
+      if (open?.decision === "pending")
+        closeUndecided(auditStore(), open.entryId, "abandoned").catch(() => {});
+    },
+    [],
+  );
 
   /** Write an audit entry, and tell the visitor if it could not be kept. */
   const record = async (entry: AuditEntry, apiKey: string) => {
@@ -151,6 +173,17 @@ export function ExplainIteration({
         checks,
       };
       await record(entry, apiKey);
+      // the explanation this one replaces never got a decision: say so in the log
+      const replaced = resultRef.current;
+      if (replaced?.decision === "pending") {
+        try {
+          await closeUndecided(auditStore(), replaced.entryId, "superseded");
+        } catch {
+          setAuditNotice(
+            "The explanation this one replaced could not be marked as superseded in the audit log.",
+          );
+        }
+      }
       setResult({
         entryId: entry.id,
         context,
