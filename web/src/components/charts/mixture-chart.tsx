@@ -3,6 +3,7 @@
 import { useCallback, useId, useMemo, useRef, type KeyboardEvent, type PointerEvent } from "react";
 import { useElementWidth } from "@/hooks/use-element-width";
 import { jitter, pointFill, triangle } from "@/lib/charts/marks";
+import { formatLinearTicks } from "@/lib/charts/axes";
 import { areaPath, linePath, linearScale, niceTicks } from "@/lib/charts/scale";
 import { eStep, mixtureDensity } from "@/lib/em/em";
 import { normalPdf } from "@/lib/em/gaussian";
@@ -57,6 +58,7 @@ export function MixtureChart({
 }: MixtureChartProps) {
   const [ref, width] = useElementWidth<HTMLDivElement>();
   const clipId = useId();
+  const stripClipId = useId();
   const svgRef = useRef<SVGSVGElement>(null);
   const dragging = useRef<1 | 2 | null>(null);
   const compact = width < 520;
@@ -116,6 +118,13 @@ export function MixtureChart({
     return t.filter((v) => v >= domain[0] && v <= domain[1]);
   }, [domain, compact]);
   const yTicks = useMemo(() => niceTicks(0, top, compact ? 3 : 4), [top, compact]);
+  const yTickLabels = useMemo(() => formatLinearTicks(yTicks), [yTicks]);
+  // ratings beyond the x axis are neither counted nor drawn: say so rather than hide them
+  const outside = useMemo(() => {
+    let count = 0;
+    for (let i = 0; i < data.length; i++) if (data[i] < domain[0] || data[i] > domain[1]) count++;
+    return count;
+  }, [data, domain]);
 
   const pathOf = (values: number[]) =>
     linePath(grid.map((v, i) => [x(v), y(Math.min(values[i], top * 4))]));
@@ -206,10 +215,18 @@ export function MixtureChart({
           <clipPath id={clipId}>
             <rect x={MARGIN.left} y={MARGIN.top - 4} width={innerW} height={innerH + 4} />
           </clipPath>
+          <clipPath id={stripClipId}>
+            <rect
+              x={MARGIN.left - 6}
+              y={stripTop - 6}
+              width={innerW + 12}
+              height={stripHeight + 12}
+            />
+          </clipPath>
         </defs>
 
         {/* y grid + ticks */}
-        {yTicks.map((t) => (
+        {yTicks.map((t, i) => (
           <g key={`y${t}`}>
             <line
               x1={MARGIN.left}
@@ -226,7 +243,7 @@ export function MixtureChart({
               textAnchor="end"
               className="fill-muted-foreground font-mono text-[10px]"
             >
-              {t === 0 ? "0" : t.toFixed(t < 0.1 ? 2 : 1)}
+              {yTickLabels[i]}
             </text>
           </g>
         ))}
@@ -305,7 +322,7 @@ export function MixtureChart({
               textAnchor="middle"
               className="fill-muted-foreground font-mono text-[10.5px]"
             >
-              {t}
+              {t < 0 ? `−${-t}` : t}
             </text>
           </g>
         ))}
@@ -389,7 +406,7 @@ export function MixtureChart({
 
         {/* points */}
         {gammas && pointsMode === "strip" && (
-          <g aria-hidden>
+          <g aria-hidden clipPath={`url(#${stripClipId})`}>
             {Array.from({ length: data.length }, (_, i) => {
               const g1 = gammas[i];
               const cx = x(data[i]);
@@ -472,6 +489,12 @@ export function MixtureChart({
             aria-hidden
           >
             rating →
+          </text>
+        )}
+        {outside > 0 && (
+          <text x={MARGIN.left} y={height - 3} className="fill-muted-foreground text-[10.5px]">
+            {outside} {outside === 1 ? "rating" : "ratings"} outside {domain[0]} to {domain[1]} not
+            shown
           </text>
         )}
       </svg>

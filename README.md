@@ -163,6 +163,8 @@ pnpm inference      # regenerate the /inference artefact (about two minutes; see
 pnpm sync:docs      # copy docs/ into web/src/content after editing a decision record or the model card
 ```
 
+The site needs no keys or secrets. Its one optional setting, `NEXT_PUBLIC_SITE_URL` (the canonical and Open Graph base URL, defaulting to `https://em-algorithm-lab.vercel.app`), is documented in [`web/.env.example`](web/.env.example); copy it to `web/.env.local` to override it.
+
 To run the original notebook, see [`original/README.md`](original/README.md).
 
 ## How the data artefacts are generated

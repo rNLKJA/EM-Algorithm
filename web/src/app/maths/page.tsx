@@ -99,6 +99,24 @@ export default function MathsPage() {
           </ol>
         </nav>
 
+        {/* below lg the sidebar is hidden, so the same contents fold up here */}
+        <details className="sheet group px-4 py-3 lg:hidden">
+          <summary className="cursor-pointer text-sm font-medium select-none">On this page</summary>
+          <nav aria-label="On this page">
+            <ol className="mt-2 grid gap-1 border-l pl-4 text-sm sm:grid-cols-2">
+              {TOC.map((t) => (
+                <li key={t.id}>
+                  <a
+                    href={`#${t.id}`}
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {t.label}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </details>
         <article className="prose-notebook max-w-[72ch] space-y-5">
           <H2 id="likelihood">Likelihood and log-likelihood</H2>
           <p>

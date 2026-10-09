@@ -107,16 +107,27 @@ export function CollapseDemo() {
           <span className="num">{sci(Math.abs(last.improvement ?? 0), 1)}</span> per step
         </>
       );
+    // π₂·n is how many ratings' worth of weight component 2 still carries
+    const weight = last.params.pi2 * DATA.length;
     verdict = {
       tone: "warn",
-      text: (
-        <>
-          The floor held: σ₂ is pinned at <span className="num">{floor.toFixed(2)}</span> and{" "}
-          {outcome} ({ll(last.logLikelihood)}). But component 2 is still a spike on{" "}
-          {(last.params.pi2 * DATA.length).toFixed(1)} ratings&apos; worth of weight. A floor stops
-          the crash; it does not rescue the fit. A different start does.
-        </>
-      ),
+      text:
+        weight < 0.5 ? (
+          <>
+            The floor held: σ₂ is pinned at <span className="num">{floor.toFixed(2)}</span> and{" "}
+            {outcome} ({ll(last.logLikelihood)}). But component 2 has been emptied: its weight
+            drained away to <span className="num">{smart(weight, 2)}</span> ratings&apos; worth, so
+            the floor only stopped σ₂ from collapsing while the other component took every rating. A
+            floor stops the crash; it does not rescue the fit. A different start does.
+          </>
+        ) : (
+          <>
+            The floor held: σ₂ is pinned at <span className="num">{floor.toFixed(2)}</span> and{" "}
+            {outcome} ({ll(last.logLikelihood)}). But component 2 is still a spike on{" "}
+            <span className="num">{weight.toFixed(1)}</span> ratings&apos; worth of weight. A floor
+            stops the crash; it does not rescue the fit. A different start does.
+          </>
+        ),
     };
   } else if (last.params.sigma2 < 0.1) {
     verdict = {

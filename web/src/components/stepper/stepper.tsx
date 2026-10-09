@@ -10,6 +10,7 @@ import { ParamSlider } from "@/components/common/param-slider";
 import { PlaybackControls } from "@/components/common/playback-controls";
 import { ScrollX } from "@/components/common/scroll-x";
 import { Segmented } from "@/components/common/segmented";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { usePlayback } from "@/hooks/use-playback";
 import { useTweenedParams } from "@/hooks/use-tweened-params";
@@ -300,7 +301,8 @@ export function Stepper({ formulas }: { formulas: StepperFormulas }) {
             </li>
           ))}
         </ol>
-        <p className="mt-2 text-xs text-muted-foreground">
+        {/* touch screens have no arrow keys, so the tip only shows with a mouse or trackpad */}
+        <p className="mt-2 hidden text-xs text-muted-foreground [@media(pointer:fine)]:block">
           Tip: ← and → step through the stages (except while a slider has focus).
         </p>
       </section>
@@ -337,6 +339,17 @@ export function Stepper({ formulas }: { formulas: StepperFormulas }) {
                 formula={formulas.mStep}
                 written={isReadme && showWritten && stage.iteration === 1}
               />
+            )}
+            {isReadme && playback.atEnd && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-3 text-sm">
+                <p className="min-w-0 flex-1 leading-relaxed">
+                  Nothing moved because the explainer&apos;s guess is already the answer. Try the
+                  muddled guess to watch EM pull the two groups apart.
+                </p>
+                <Button variant="outline" size="sm" onClick={() => choosePreset("overlap")}>
+                  Try Muddled
+                </Button>
+              </div>
             )}
           </div>
         </section>
@@ -413,16 +426,30 @@ function ParamTable({ rows }: { rows: { label: string; params: MixtureParams }[]
   return (
     <ScrollX label="Parameters">
       <table className="num w-full min-w-[18rem] text-sm">
+        <colgroup />
+        {rows.map((r) => (
+          <colgroup key={r.label} span={3} />
+        ))}
         <thead>
+          <tr className="text-left text-xs text-muted-foreground">
+            <td className="py-1 pr-3" />
+            {rows.map((r) => (
+              <th key={r.label} className="py-1 pr-3 font-normal" colSpan={3} scope="colgroup">
+                {r.label}
+              </th>
+            ))}
+          </tr>
           <tr className="text-left text-xs text-muted-foreground">
             <th className="py-1.5 pr-3 font-normal" scope="col">
               group
             </th>
-            {rows.map((r) => (
-              <th key={r.label} className="py-1.5 pr-3 font-normal" colSpan={3} scope="colgroup">
-                {r.label}: π · μ · σ
-              </th>
-            ))}
+            {rows.map((r) =>
+              (["π", "μ", "σ"] as const).map((symbol) => (
+                <th key={`${r.label}-${symbol}`} className="py-1.5 pr-3 font-normal" scope="col">
+                  {symbol}
+                </th>
+              )),
+            )}
           </tr>
         </thead>
         <tbody>
