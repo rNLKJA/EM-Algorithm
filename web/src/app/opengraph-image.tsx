@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { linePath, linearScale } from "@/lib/charts/scale";
 import { normalPdf } from "@/lib/em/gaussian";
@@ -7,7 +9,18 @@ export const alt = "EM, one step at a time: an interactive companion to an EM al
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+// Static TTF copies of the site's own fonts (next/og cannot read WOFF2); see
+// assets/og-fonts/README.md and scripts/make_og_fonts.py. Read synchronously so
+// the image stays prerendered at build time (uncached async I/O would make the
+// route dynamic under Cache Components).
+const font = (file: string) => readFileSync(join(process.cwd(), "assets", "og-fonts", file));
+
 export default function OpengraphImage() {
+  const fraunces = font("fraunces-600.ttf");
+  const frauncesItalic = font("fraunces-italic-400.ttf");
+  const plexSans = font("ibm-plex-sans-400.ttf");
+  const plexMono = font("ibm-plex-mono-500.ttf");
+
   const p = notebookFinal;
   const x = linearScale([0.5, 10.5], [60, 1140]);
   const y = linearScale([0, 0.25], [560, 300]);
@@ -28,18 +41,41 @@ export default function OpengraphImage() {
         display: "flex",
         flexDirection: "column",
         background: "#f6f1e7",
+        backgroundImage:
+          "linear-gradient(rgba(29,42,48,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(29,42,48,0.05) 1px, transparent 1px)",
+        backgroundSize: "28px 28px",
         color: "#1d2a30",
         padding: "56px 64px",
         position: "relative",
+        fontFamily: "Plex Sans",
       }}
     >
-      <div style={{ fontSize: 26, letterSpacing: 4, color: "#56636b", display: "flex" }}>
+      <div
+        style={{
+          fontFamily: "Plex Mono",
+          fontSize: 22,
+          letterSpacing: 4,
+          color: "#56636b",
+          display: "flex",
+        }}
+      >
         EXPECTATION–MAXIMISATION, BY DOING
       </div>
-      <div style={{ fontSize: 92, fontWeight: 700, marginTop: 18, display: "flex" }}>
-        EM, one step at a time
+      <div
+        style={{
+          fontFamily: "Fraunces",
+          fontSize: 96,
+          fontWeight: 600,
+          letterSpacing: -2,
+          lineHeight: 1,
+          marginTop: 22,
+          display: "flex",
+        }}
+      >
+        EM,&nbsp;<span style={{ fontStyle: "italic", fontWeight: 400 }}>one step</span>
+        &nbsp;at a time
       </div>
-      <div style={{ fontSize: 30, color: "#56636b", marginTop: 14, display: "flex" }}>
+      <div style={{ fontSize: 30, color: "#56636b", marginTop: 18, display: "flex" }}>
         Step through four ratings · watch 200 converge · see where it goes wrong
       </div>
       <svg
@@ -62,6 +98,14 @@ export default function OpengraphImage() {
         />
       </svg>
     </div>,
-    size,
+    {
+      ...size,
+      fonts: [
+        { name: "Fraunces", data: fraunces, weight: 600, style: "normal" },
+        { name: "Fraunces", data: frauncesItalic, weight: 400, style: "italic" },
+        { name: "Plex Sans", data: plexSans, weight: 400, style: "normal" },
+        { name: "Plex Mono", data: plexMono, weight: 500, style: "normal" },
+      ],
+    },
   );
 }
