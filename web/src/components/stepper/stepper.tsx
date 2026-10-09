@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { LineChart } from "@/components/charts/line-chart";
 import { MixtureChart } from "@/components/charts/mixture-chart";
 import { CorrectionTag } from "@/components/common/callout";
 import { ComponentSwatch, Legend } from "@/components/common/legend";
 import { ParamSlider } from "@/components/common/param-slider";
 import { PlaybackControls } from "@/components/common/playback-controls";
+import { ScrollX } from "@/components/common/scroll-x";
 import { Segmented } from "@/components/common/segmented";
 import { Switch } from "@/components/ui/switch";
 import { usePlayback } from "@/hooks/use-playback";
@@ -100,183 +101,186 @@ export function Stepper({ formulas }: { formulas: StepperFormulas }) {
     playback.reset();
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLElement;
-    if (target.closest("[role=slider],[role=radio],input,select,textarea")) return;
-    if (event.key === "ArrowRight") {
-      playback.next();
+  // ← / → step through the stages from anywhere on the page, except while a control
+  // that uses the arrow keys itself (slider, radio group, text field, scroll box) has focus.
+  const { next, prev } = playback;
+  useEffect(() => {
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          "[role=slider],[role=radio],[role=tab],[role=region],input,select,textarea,[contenteditable=true]",
+        )
+      )
+        return;
+      if (event.key === "ArrowRight") next();
+      else prev();
       event.preventDefault();
-    } else if (event.key === "ArrowLeft") {
-      playback.prev();
-      event.preventDefault();
-    }
-  };
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [next, prev]);
 
   const gammaForChart = stage.kind === "init" ? undefined : stage.e.gamma1;
   const chartParams = stage.kind === "e" ? stage.params : tweened;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]" onKeyDown={onKeyDown}>
-      <div className="space-y-5">
-        <section aria-label="Starting guess" className="sheet space-y-4 p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">Starting guess</h2>
-            <Segmented
-              ariaLabel="Choose a starting guess"
-              size="sm"
-              value={preset}
-              onChange={choosePreset}
-              options={[
-                ...STEPPER_PRESETS.map((p) => ({
-                  value: p.id as PresetId,
-                  label:
-                    p.id === "readme" ? "Explainer's" : p.id === "overlap" ? "Muddled" : "Lopsided",
-                  description: p.description,
-                })),
-                { value: "custom" as PresetId, label: "Your own" },
-              ]}
-            />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {preset === "custom"
-              ? "Drag the means on the chart or use the sliders. EM restarts from your guess."
-              : STEPPER_PRESETS.find((p) => p.id === preset)!.description}
-          </p>
-          {preset === "custom" && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ParamSlider
-                label="μ₁"
-                accent={1}
-                value={custom.mu1}
-                min={0.5}
-                max={10.5}
-                step={0.05}
-                onChange={(v) => updateCustom({ mu1: v })}
-              />
-              <ParamSlider
-                label="μ₂"
-                accent={2}
-                value={custom.mu2}
-                min={0.5}
-                max={10.5}
-                step={0.05}
-                onChange={(v) => updateCustom({ mu2: v })}
-              />
-              <ParamSlider
-                label="σ₁"
-                accent={1}
-                value={custom.sigma1}
-                min={0.2}
-                max={4}
-                step={0.05}
-                onChange={(v) => updateCustom({ sigma1: v })}
-              />
-              <ParamSlider
-                label="σ₂"
-                accent={2}
-                value={custom.sigma2}
-                min={0.2}
-                max={4}
-                step={0.05}
-                onChange={(v) => updateCustom({ sigma2: v })}
-              />
-              <ParamSlider
-                label="π₁ (π₂ = 1 − π₁)"
-                value={custom.pi1}
-                min={0.05}
-                max={0.95}
-                step={0.01}
-                onChange={(v) => updateCustom({ pi1: v })}
-              />
-            </div>
-          )}
-        </section>
-
-        <section aria-label="Mixture chart" className="sheet p-4 sm:p-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <Legend labels={["Group 1", "Group 2"]} />
-            <span className="text-xs text-muted-foreground">
-              bars under each rating: γ₁ (teal) vs γ₂ (coral)
-            </span>
-          </div>
-          <MixtureChart
-            data={DATA}
-            params={chartParams}
-            gamma1={gammaForChart}
-            pointsMode="markers"
-            showHistogram={false}
-            height={300}
-            yMax={yMax}
-            componentLabels={["group 1", "group 2"]}
-            draggable={preset === "custom" && stage.kind === "init"}
-            onMeansChange={(mu1, mu2) => updateCustom({ mu1, mu2 })}
-            ariaLabel={`Four ratings 2, 3, 7 and 8 with the two group densities at ${stageTitle(stage)}. Group 1 mean ${chartParams.mu1.toFixed(2)}, group 2 mean ${chartParams.mu2.toFixed(2)}.`}
-          />
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-            <PlaybackControls
-              playing={playback.playing}
-              atStart={playback.atStart}
-              atEnd={playback.atEnd}
-              onReset={playback.reset}
-              onPrev={playback.prev}
-              onNext={playback.next}
-              onToggle={playback.toggle}
-              onEnd={playback.toEnd}
-            />
-            <p className="num text-sm text-muted-foreground" aria-hidden>
-              step {playback.index + 1} / {stages.length}
-            </p>
-          </div>
-          <ol className="mt-3 flex flex-wrap gap-1.5" aria-label="Stages">
-            {stages.map((s, i) => (
-              <li key={i}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    playback.setPlaying(false);
-                    playback.setIndex(i);
-                  }}
-                  aria-current={i === playback.index ? "step" : undefined}
-                  aria-label={stageTitle(s)}
-                  className={cn(
-                    "num h-7 min-w-10 rounded-md border px-2 text-xs transition-colors",
-                    i === playback.index
-                      ? "border-foreground bg-foreground text-background"
-                      : i < playback.index
-                        ? "bg-muted text-foreground"
-                        : "text-muted-foreground hover:bg-muted",
-                  )}
-                >
-                  {stageLabel(s)}
-                </button>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Tip: ← and → step through the stages.
-          </p>
-        </section>
-
-        <section aria-label="Log-likelihood" className="sheet p-4 sm:p-5">
-          <div className="mb-1 flex items-baseline justify-between gap-3">
-            <h2 className="text-base font-semibold">Log-likelihood</h2>
-            <span className="num text-sm">{smart(stage.logLikelihood, 4)}</span>
-          </div>
-          <div className="text-sm text-muted-foreground">{formulas.logLik}</div>
-          <LineChart
-            height={150}
-            xStart={0}
-            cursor={currentIteration}
-            yLabel="ℓ(θ)"
-            series={[
-              { id: "ll", label: "log-likelihood", values: llSeries, colour: "var(--foreground)" },
+    // DOM order is the phone order: starting guess, chart and controls, the narration
+    // for the current stage, then the log-likelihood. On lg the narration becomes the
+    // right-hand column beside the other three.
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:grid-rows-[auto_auto_1fr]">
+      <section
+        aria-label="Starting guess"
+        className="sheet space-y-4 p-4 sm:p-5 lg:col-start-1 lg:row-start-1"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Starting guess</h2>
+          <Segmented
+            ariaLabel="Choose a starting guess"
+            size="sm"
+            value={preset}
+            onChange={choosePreset}
+            options={[
+              ...STEPPER_PRESETS.map((p) => ({
+                value: p.id as PresetId,
+                label:
+                  p.id === "readme" ? "Explainer's" : p.id === "overlap" ? "Muddled" : "Lopsided",
+                description: p.description,
+              })),
+              { value: "custom" as PresetId, label: "Your own" },
             ]}
-            ariaLabel={`Log-likelihood by iteration: ${llSeries.map((v) => v.toFixed(3)).join(", ")}`}
           />
-        </section>
-      </div>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {preset === "custom"
+            ? "Drag the means on the chart or use the sliders. EM restarts from your guess."
+            : STEPPER_PRESETS.find((p) => p.id === preset)!.description}
+        </p>
+        {preset === "custom" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ParamSlider
+              label="μ₁"
+              accent={1}
+              value={custom.mu1}
+              min={0.5}
+              max={10.5}
+              step={0.05}
+              onChange={(v) => updateCustom({ mu1: v })}
+            />
+            <ParamSlider
+              label="μ₂"
+              accent={2}
+              value={custom.mu2}
+              min={0.5}
+              max={10.5}
+              step={0.05}
+              onChange={(v) => updateCustom({ mu2: v })}
+            />
+            <ParamSlider
+              label="σ₁"
+              accent={1}
+              value={custom.sigma1}
+              min={0.2}
+              max={4}
+              step={0.05}
+              onChange={(v) => updateCustom({ sigma1: v })}
+            />
+            <ParamSlider
+              label="σ₂"
+              accent={2}
+              value={custom.sigma2}
+              min={0.2}
+              max={4}
+              step={0.05}
+              onChange={(v) => updateCustom({ sigma2: v })}
+            />
+            <ParamSlider
+              label="π₁ (π₂ = 1 − π₁)"
+              value={custom.pi1}
+              min={0.05}
+              max={0.95}
+              step={0.01}
+              onChange={(v) => updateCustom({ pi1: v })}
+            />
+          </div>
+        )}
+      </section>
 
-      <section aria-live="polite" aria-label="Current stage" className="sheet min-w-0 p-4 sm:p-6">
+      <section
+        aria-label="Mixture chart"
+        className="sheet p-4 sm:p-5 lg:col-start-1 lg:row-start-2"
+      >
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <Legend labels={["Group 1", "Group 2"]} />
+          <span className="text-xs text-muted-foreground">
+            bars under each rating: γ₁ (teal) vs γ₂ (coral)
+          </span>
+        </div>
+        <MixtureChart
+          data={DATA}
+          params={chartParams}
+          gamma1={gammaForChart}
+          pointsMode="markers"
+          showHistogram={false}
+          height={300}
+          yMax={yMax}
+          componentLabels={["group 1", "group 2"]}
+          draggable={preset === "custom" && stage.kind === "init"}
+          onMeansChange={(mu1, mu2) => updateCustom({ mu1, mu2 })}
+          ariaLabel={`Four ratings 2, 3, 7 and 8 with the two group densities at ${stageTitle(stage)}. Group 1 mean ${chartParams.mu1.toFixed(2)}, group 2 mean ${chartParams.mu2.toFixed(2)}.`}
+        />
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <PlaybackControls
+            playing={playback.playing}
+            atStart={playback.atStart}
+            atEnd={playback.atEnd}
+            onReset={playback.reset}
+            onPrev={playback.prev}
+            onNext={playback.next}
+            onToggle={playback.toggle}
+            onEnd={playback.toEnd}
+          />
+          <p className="num text-sm text-muted-foreground" aria-hidden>
+            step {playback.index + 1} / {stages.length}
+          </p>
+        </div>
+        <ol className="mt-3 flex flex-wrap gap-1.5" aria-label="Stages">
+          {stages.map((s, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                onClick={() => {
+                  playback.setPlaying(false);
+                  playback.setIndex(i);
+                }}
+                aria-current={i === playback.index ? "step" : undefined}
+                aria-label={`${stageLabel(s)}: ${stageTitle(s)}`}
+                className={cn(
+                  "num h-7 min-w-10 rounded-md border px-2 text-xs transition-colors",
+                  i === playback.index
+                    ? "border-foreground bg-foreground text-background"
+                    : i < playback.index
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                {stageLabel(s)}
+              </button>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Tip: ← and → step through the stages (except while a slider has focus).
+        </p>
+      </section>
+
+      <section
+        aria-live="polite"
+        aria-label="Current stage"
+        className="sheet min-w-0 p-4 sm:p-6 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start"
+      >
         <p className="eyebrow">
           {stage.kind === "init" ? "start" : stage.kind === "e" ? "expectation" : "maximisation"}
         </p>
@@ -308,6 +312,26 @@ export function Stepper({ formulas }: { formulas: StepperFormulas }) {
           )}
         </div>
       </section>
+      <section
+        aria-label="Log-likelihood"
+        className="sheet p-4 sm:p-5 lg:col-start-1 lg:row-start-3 lg:self-start"
+      >
+        <div className="mb-1 flex items-baseline justify-between gap-3">
+          <h2 className="text-base font-semibold">Log-likelihood</h2>
+          <span className="num text-sm">{smart(stage.logLikelihood, 4)}</span>
+        </div>
+        <div className="text-sm text-muted-foreground">{formulas.logLik}</div>
+        <LineChart
+          height={150}
+          xStart={0}
+          cursor={currentIteration}
+          yLabel="ℓ(θ)"
+          series={[
+            { id: "ll", label: "log-likelihood", values: llSeries, colour: "var(--foreground)" },
+          ]}
+          ariaLabel={`Log-likelihood by iteration: ${llSeries.map((v) => v.toFixed(3)).join(", ")}`}
+        />
+      </section>
     </div>
   );
 }
@@ -328,7 +352,7 @@ function InitPanel({ params }: { params: MixtureParams }) {
 
 function ParamTable({ rows }: { rows: { label: string; params: MixtureParams }[] }) {
   return (
-    <div className="overflow-x-auto">
+    <ScrollX label="Parameters">
       <table className="num w-full min-w-[18rem] text-sm">
         <thead>
           <tr className="text-left text-xs text-muted-foreground">
@@ -358,7 +382,7 @@ function ParamTable({ rows }: { rows: { label: string; params: MixtureParams }[]
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollX>
   );
 }
 

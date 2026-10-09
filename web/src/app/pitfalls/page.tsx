@@ -4,8 +4,10 @@ import { LineChart } from "@/components/charts/line-chart";
 import { StaticMixture } from "@/components/charts/static-mixture";
 import { Callout } from "@/components/common/callout";
 import { ConsoleBlock } from "@/components/common/console";
+import { Ell } from "@/components/common/ell";
 import { ComponentSwatch, Legend } from "@/components/common/legend";
 import { PageHeader } from "@/components/common/page-header";
+import { ScrollX } from "@/components/common/scroll-x";
 import { M, MathBlock } from "@/components/maths/tex";
 import { CollapseDemo } from "@/components/pitfalls/collapse-demo";
 import { RestartGallery } from "@/components/pitfalls/restart-gallery";
@@ -68,6 +70,12 @@ export default function PitfallsPage() {
   const lls = long.iterations.map((it) => it.logLikelihood);
   const seed0 = run.otherSeeds.find((s) => s.seed === 0);
 
+  const stopRows = [
+    { label: "notebook, t = 15", p: final, ll: lls[14] },
+    { label: `converged, t = ${long.iterations.length}`, p: longFinal, ll: lls.at(-1)! },
+    { label: "true", p: run.trueParams, ll: null },
+  ];
+
   const sortedRow = (p: MixtureParams) =>
     p.mu1 <= p.mu2
       ? [p.pi1, p.mu1, p.sigma1, p.pi2, p.mu2, p.sigma2]
@@ -127,8 +135,8 @@ export default function PitfallsPage() {
               <h3 className="text-base font-semibold">
                 What each fitted component actually captured
               </h3>
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[22rem] text-sm">
+              <ScrollX label="Fitted components" className="mt-3">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-muted-foreground">
                       <th scope="col" className="py-1.5 pr-3 font-normal">
@@ -162,7 +170,7 @@ export default function PitfallsPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollX>
               <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
                 The fix is bookkeeping, not maths: after fitting, match each component to the group
                 whose mean it is closest to (or simply sort components by mean). Every comparison
@@ -234,14 +242,44 @@ export default function PitfallsPage() {
                   ariaLabel={`Log-likelihood over ${lls.length} iterations, rising from ${lls[0].toFixed(2)} to ${lls.at(-1)!.toFixed(2)}; the notebook stopped at iteration 15 with ${lls[14].toFixed(2)}.`}
                 />
               </div>
-              <div className="sheet overflow-x-auto p-1">
-                <table className="num w-full min-w-[30rem] text-xs sm:text-sm">
+              {/* phones: one card per run; sm and up: the full table */}
+              <ul className="grid gap-2 sm:hidden" aria-label="Parameters sorted by mean">
+                {stopRows.map((row) => (
+                  <li key={row.label} className="sheet px-3 py-2.5">
+                    <p className="flex items-baseline justify-between gap-2 text-sm font-medium">
+                      {row.label}
+                      {row.ll !== null && (
+                        <span className="num text-xs font-normal text-muted-foreground">
+                          <Ell /> = {row.ll.toFixed(2)}
+                        </span>
+                      )}
+                    </p>
+                    <dl className="num mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+                      {(["low", "high"] as const).map((group, g) => {
+                        const v = sortedRow(row.p).slice(g * 3, g * 3 + 3);
+                        return (
+                          <div key={group} className="contents">
+                            <dt className="font-sans text-muted-foreground">{group} group</dt>
+                            <dd>
+                              π {v[0].toFixed(2)} · μ {v[1].toFixed(2)} · σ {v[2].toFixed(2)}
+                            </dd>
+                          </div>
+                        );
+                      })}
+                    </dl>
+                  </li>
+                ))}
+              </ul>
+              <div className="sheet hidden p-1 sm:block">
+                <table className="num w-full text-xs sm:text-sm">
                   <caption className="sr-only">
                     Parameters sorted by mean: low group then high group
                   </caption>
                   <thead>
                     <tr className="text-left text-muted-foreground">
-                      <th scope="col" className="px-3 py-2 font-sans font-normal" />
+                      <th scope="col" className="px-3 py-2 font-sans font-normal">
+                        <span className="sr-only">run</span>
+                      </th>
                       <th scope="col" className="px-2 py-2 font-normal" colSpan={3}>
                         low group: π μ σ
                       </th>
@@ -249,20 +287,12 @@ export default function PitfallsPage() {
                         high group: π μ σ
                       </th>
                       <th scope="col" className="px-2 py-2 font-normal">
-                        ℓ
+                        <Ell />
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      { label: "notebook, t = 15", p: final, ll: lls[14] },
-                      {
-                        label: `converged, t = ${long.iterations.length}`,
-                        p: longFinal,
-                        ll: lls.at(-1)!,
-                      },
-                      { label: "true", p: run.trueParams, ll: null },
-                    ].map((row) => (
+                    {stopRows.map((row) => (
                       <tr key={row.label} className="border-t">
                         <th
                           scope="row"
@@ -338,9 +368,10 @@ export default function PitfallsPage() {
             </p>
             <p>
               On the notebook&apos;s own data nearly every random start reaches the answer the
-              notebook&apos;s run was heading for (ℓ = −415.37). Now and then one finds a different
-              peak with an even higher likelihood (ℓ ≈ −413.99): a narrow component sitting on a
-              cluster of high ratings. Switch the data and draw new starts a few times to catch one.
+              notebook&apos;s run was heading for (<Ell /> = −415.37). Now and then one finds a
+              different peak with an even higher likelihood (<Ell /> ≈ −413.99): a narrow component
+              sitting on a cluster of high ratings. Switch the data and draw new starts a few times
+              to catch one.
             </p>
           </div>
           <RestartGallery />
@@ -359,9 +390,10 @@ export default function PitfallsPage() {
               <p>
                 The notebook&apos;s data has a ready-made trap: clipping at 10 turned seven ratings
                 into the identical value 10.0. A component that starts on them with a small spread
-                shrinks every iteration until σ is exactly zero and the next step divides zero by
-                zero. The notebook&apos;s random start (σ ≥ 0.5) never got close, so its run was
-                safe.
+                shrinks every iteration until σ is zero (the next step divides zero by zero) or
+                floating-point residue that no longer moves, which a naive loop would happily call
+                &ldquo;converged&rdquo;. The notebook&apos;s random start (σ ≥ 0.5) never got close,
+                so its run was safe.
               </p>
             </div>
             <div className="sheet p-4 sm:p-5">
@@ -369,9 +401,9 @@ export default function PitfallsPage() {
                 With component 2 sitting on one point <M>{String.raw`x_j`}</M>, the log-likelihood
                 is at least
               </p>
-              <MathBlock>
-                {String.raw`\ell(\theta) \;\ge\; \log\frac{\pi_2}{\sigma_2\sqrt{2\pi}} \;+\; \sum_{i \ne j} \log\big(\pi_1 f(x_i \mid \mu_1, \sigma_1)\big)`}
-              </MathBlock>
+              <MathBlock
+                narrow={String.raw`\begin{aligned} \ell(\theta) \;\ge\;& \log\frac{\pi_2}{\sigma_2\sqrt{2\pi}} \\ &+ \sum_{i \ne j} \log\big(\pi_1 f(x_i \mid \mu_1, \sigma_1)\big) \end{aligned}`}
+              >{String.raw`\ell(\theta) \;\ge\; \log\frac{\pi_2}{\sigma_2\sqrt{2\pi}} \;+\; \sum_{i \ne j} \log\big(\pi_1 f(x_i \mid \mu_1, \sigma_1)\big)`}</MathBlock>
               <p className="text-sm text-muted-foreground">
                 and the first term goes to <M>{String.raw`+\infty`}</M> as{" "}
                 <M>{String.raw`\sigma_2 \to 0`}</M> while the rest stays put.

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Callout } from "@/components/common/callout";
+import { ScrollX } from "@/components/common/scroll-x";
 import { PageHeader } from "@/components/common/page-header";
 import { M, MathBlock } from "@/components/maths/tex";
 import { Stepper } from "@/components/stepper/stepper";
@@ -70,18 +71,18 @@ export default function StepperPage() {
               <Link href="/maths">Maths page</Link> lists every correction in context.
             </p>
           </div>
-          <div className="sheet overflow-x-auto p-1">
-            <table className="w-full min-w-[26rem] text-sm">
+          <ScrollX label="Corrections to the worked example" className="sheet p-1">
+            <table className="w-full text-sm">
               <caption className="sr-only">Corrections to the worked example</caption>
               <thead>
                 <tr className="text-left text-xs text-muted-foreground">
-                  <th scope="col" className="px-3 py-2.5 font-normal">
+                  <th scope="col" className="px-3 py-2.5 font-normal sm:whitespace-nowrap">
                     quantity
                   </th>
-                  <th scope="col" className="px-3 py-2.5 font-normal">
+                  <th scope="col" className="px-3 py-2.5 font-normal sm:whitespace-nowrap">
                     as written
                   </th>
-                  <th scope="col" className="px-3 py-2.5 font-normal">
+                  <th scope="col" className="px-3 py-2.5 font-normal sm:whitespace-nowrap">
                     exact
                   </th>
                 </tr>
@@ -105,7 +106,7 @@ export default function StepperPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollX>
         </section>
 
         <Callout className="mt-10" title="Want more than four points?">

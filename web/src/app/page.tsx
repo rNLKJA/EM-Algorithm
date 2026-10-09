@@ -2,6 +2,7 @@ import { ArrowRight, BookOpenText, FlaskConical, Footprints, TriangleAlert } fro
 import Link from "next/link";
 import { StaticMixture } from "@/components/charts/static-mixture";
 import { ComponentSwatch } from "@/components/common/legend";
+import { ScrollX } from "@/components/common/scroll-x";
 import { GithubMark } from "@/components/layout/github-mark";
 import { M, MathBlock } from "@/components/maths/tex";
 import { Button } from "@/components/ui/button";
@@ -204,24 +205,26 @@ export default function Home() {
             </dl>
           </div>
 
-          <div className="sheet mt-8 overflow-x-auto p-1">
-            <table className="w-full min-w-[34rem] text-sm">
-              <caption className="sr-only">Estimated and true parameters, matched by mean</caption>
+          <ScrollX label="Estimated and true parameters" className="sheet mt-8 p-1">
+            <table className="w-full text-sm sm:min-w-[34rem]">
+              <caption className="sr-only">
+                Estimated parameters (true value underneath), matched to the true groups by mean
+              </caption>
               <thead>
                 <tr className="text-left text-xs text-muted-foreground">
-                  <th scope="col" className="px-4 py-3 font-normal">
+                  <th scope="col" className="px-3 py-3 font-normal sm:px-4">
                     group
                   </th>
-                  <th scope="col" className="px-3 py-3 font-normal">
-                    share π (est. / true)
+                  <th scope="col" className="px-2 py-3 font-normal sm:px-3">
+                    share π
                   </th>
-                  <th scope="col" className="px-3 py-3 font-normal">
+                  <th scope="col" className="px-2 py-3 font-normal sm:px-3">
                     mean μ
                   </th>
-                  <th scope="col" className="px-3 py-3 font-normal">
+                  <th scope="col" className="px-2 py-3 font-normal sm:px-3">
                     spread σ
                   </th>
-                  <th scope="col" className="px-4 py-3 font-normal">
+                  <th scope="col" className="hidden px-4 py-3 font-normal sm:table-cell">
                     fitted as
                   </th>
                 </tr>
@@ -238,17 +241,23 @@ export default function Home() {
                       : [run.trueParams.pi2, run.trueParams.mu2, run.trueParams.sigma2];
                   const fittedAs = (matching.swapped ? 3 - k : k) as 1 | 2;
                   return (
-                    <tr key={k} className="border-t">
-                      <th scope="row" className="px-4 py-3 text-left font-sans font-medium">
+                    <tr key={k} className="border-t align-top">
+                      <th scope="row" className="px-3 py-3 text-left font-sans font-medium sm:px-4">
                         {NOTEBOOK_GROUP_NAMES[k - 1]}
+                        {/* on phones the "fitted as" column folds in under the group name */}
+                        <span className="mt-1 flex items-center gap-1.5 text-xs font-normal text-muted-foreground sm:hidden">
+                          <ComponentSwatch k={fittedAs} /> fitted as component {fittedAs}
+                        </span>
                       </th>
                       {est.map((v, i) => (
-                        <td key={i} className="px-3 py-3">
-                          {v.toFixed(3)}{" "}
-                          <span className="text-muted-foreground">/ {tru[i].toFixed(1)}</span>
+                        <td key={i} className="px-2 py-3 sm:px-3">
+                          {v.toFixed(3)}
+                          <span className="block text-[0.72rem] text-muted-foreground">
+                            true {tru[i].toFixed(1)}
+                          </span>
                         </td>
                       ))}
-                      <td className="px-4 py-3 font-sans">
+                      <td className="hidden px-4 py-3 font-sans sm:table-cell">
                         <span className="flex items-center gap-1.5">
                           <ComponentSwatch k={fittedAs} /> component {fittedAs}
                         </span>
@@ -258,10 +267,10 @@ export default function Home() {
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollX>
           <p className="mt-3 text-sm text-muted-foreground">
-            Note the last column: EM put the sci-fi lovers in component 2. That small detail is the
-            first of the{" "}
+            Note which component each group was fitted as: EM put the sci-fi lovers in component 2.
+            That small detail is the first of the{" "}
             <Link className="link" href="/pitfalls#label-switching">
               pitfalls
             </Link>

@@ -3,7 +3,7 @@
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { nav } from "@/lib/site";
 
@@ -42,9 +42,33 @@ export function MobileNav() {
   const [openFor, setOpenFor] = useState<string | null>(null);
   // Close automatically after navigating: the menu is open only for the path it was opened on.
   const open = openFor === pathname;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Escape closes the menu and hands focus back to the button; a tap or click
+  // anywhere outside the menu closes it too.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpenFor(null);
+      buttonRef.current?.focus();
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpenFor(null);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
+
   return (
-    <div className="md:hidden">
+    <div ref={rootRef} className="md:hidden">
       <button
+        ref={buttonRef}
         type="button"
         className="inline-flex size-9 items-center justify-center rounded-md text-foreground hover:bg-muted"
         aria-expanded={open}
@@ -57,7 +81,7 @@ export function MobileNav() {
       {open && (
         <div
           id="mobile-menu"
-          className="absolute inset-x-0 top-full border-b bg-background/95 px-4 pt-2 pb-4 backdrop-blur"
+          className="absolute inset-x-0 top-full border-b bg-background px-4 pt-2 pb-4 shadow-[0_18px_36px_-18px_rgb(0_0_0/0.35)]"
         >
           <ul className="grid gap-1">
             {nav.map((item) => (
