@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ArrowRight, BookOpenText, FlaskConical, Footprints, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { StaticMixture } from "@/components/charts/static-mixture";
@@ -9,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { alignParams, matchByMean } from "@/lib/em/labels";
 import { NOTEBOOK_GROUP_NAMES, notebookFinal, notebookRun } from "@/lib/em/notebook-run";
 import { minus, pyPercent, signed } from "@/lib/format";
-import { repoFile, site } from "@/lib/site";
+import { pageMetadata, repoFile, site } from "@/lib/site";
+
+export const metadata: Metadata = pageMetadata({ description: site.description, path: "/" });
 
 const ENTRY_POINTS = [
   {
@@ -388,7 +391,8 @@ export default function Home() {
               <div>
                 <dt className="text-muted-foreground">When</dt>
                 <dd className="mt-0.5 font-medium">
-                  September 2025 (explainer and notebook), October 2026 (this site)
+                  September 2025 (explainer and notebook, last edited June 2026), October 2026 (this
+                  site)
                 </dd>
               </div>
               <div>

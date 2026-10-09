@@ -17,7 +17,7 @@ Step through four ratings by hand, watch a 200-rating Gaussian mixture converge,
 
 ## Overview
 
-This is a personal project, not coursework. In September 2025 I wrote a long explainer of the EM algorithm, framed around the Netflix sparse-ratings problem, together with a Jupyter notebook that fits a two-component Gaussian mixture to 200 synthetic "movie ratings" with an `EMAnalyzer` class written from scratch. Both are preserved unchanged in [`original/`](original/).
+This is a personal project, not coursework. In September 2025 I wrote a long explainer of the EM algorithm, framed around the Netflix sparse-ratings problem, together with a Jupyter notebook that fits a two-component Gaussian mixture to 200 synthetic "movie ratings" with an `EMAnalyzer` class written from scratch. Both are preserved unchanged in [`original/`](original/), as last edited in June 2026.
 
 In 2026 I rebuilt them as a small web lab. The TypeScript port of the notebook's EM code reproduces the notebook's printed results exactly, and the site turns the explainer's derivations and worked example into things you can step through and break:
 
@@ -135,7 +135,7 @@ The data are synthetic, so there is nothing private in them. The "make your own"
 
 ## Provenance
 
-The September 2025 explainer and notebook are preserved byte for byte in [`original/`](original/) (moved with `git mv`, so their history is intact). Nothing on the site is retyped from them: numbers come from re-executing the notebook, or from the TypeScript port that is tested against that execution. Where the original is wrong, the site says so beside the original rather than editing it.
+The explainer and notebook (first written in September 2025, last edited in June 2026) are preserved byte for byte in [`original/`](original/) (moved with `git mv`, so their history is intact); the September 2025 draft of the explainer is in [`original/_archive/`](original/_archive/). Nothing on the site is retyped from them: numbers come from re-executing the notebook, or from the TypeScript port that is tested against that execution. Where the original is wrong, the site says so beside the original rather than editing it.
 
 ## Licence
 

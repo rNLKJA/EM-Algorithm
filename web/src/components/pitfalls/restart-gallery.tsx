@@ -146,6 +146,15 @@ export function RestartGallery() {
         )}
       </div>
 
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Each thumbnail draws the lower-mean component in teal, whichever number EM gave it, so the
+        same answer always looks the same. Which component ends up as &ldquo;1&rdquo; is{" "}
+        <a className="link" href="#label-switching">
+          label switching
+        </a>
+        .
+      </p>
+
       <ul
         className={cn(
           "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6",
@@ -160,7 +169,7 @@ export function RestartGallery() {
             <li key={run.index} className="sheet overflow-hidden p-2.5">
               <StaticMixture
                 data={dataset.ratings}
-                params={run.final}
+                params={run.sorted}
                 width={260}
                 height={110}
                 yMax={yMax}

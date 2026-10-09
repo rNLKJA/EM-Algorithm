@@ -7,13 +7,14 @@ import { M, MathBlock } from "@/components/maths/tex";
 import { Stepper } from "@/components/stepper/stepper";
 import { CORRECTIONS } from "@/lib/em/corrections";
 import { smart } from "@/lib/format";
-import { repoFile } from "@/lib/site";
+import { pageMetadata, repoFile } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Stepper: four ratings, by hand",
   description:
     "Step through the explainer's hand-worked EM example on the ratings 2, 3, 7 and 8: E-step responsibilities, M-step updates and the exact numbers beside the hand-worked ones.",
-};
+  path: "/stepper",
+});
 
 export default function StepperPage() {
   const readmeCorrections = CORRECTIONS.filter((c) => c.id.startsWith("readme"));
@@ -41,10 +42,21 @@ export default function StepperPage() {
                 {String.raw`\pi_k = \tfrac{1}{n}\sum_i \gamma_{ik}, \qquad \mu_k = \frac{\sum_i \gamma_{ik} x_i}{\sum_i \gamma_{ik}}, \qquad \sigma_k = \sqrt{\frac{\sum_i \gamma_{ik} (x_i - \mu_k)^2}{\sum_i \gamma_{ik}}}`}
               </MathBlock>
             ),
+            // One line where the card is wide enough (without letting KaTeX break it
+            // inside the brackets), two aligned lines on phones.
             logLik: (
-              <M>
-                {String.raw`\ell(\theta) = \sum_i \log\big(\pi_1 f(x_i \mid \mu_1, \sigma_1) + \pi_2 f(x_i \mid \mu_2, \sigma_2)\big)`}
-              </M>
+              <div className="@container">
+                <div className="whitespace-nowrap @max-md:hidden">
+                  <M>
+                    {String.raw`\ell(\theta) = \sum_i \log\big(\pi_1 f(x_i \mid \mu_1, \sigma_1) + \pi_2 f(x_i \mid \mu_2, \sigma_2)\big)`}
+                  </M>
+                </div>
+                <div className="whitespace-nowrap @md:hidden">
+                  <M>
+                    {String.raw`\begin{aligned} \ell(\theta) = \textstyle\sum_i \log\big(&\pi_1 f(x_i \mid \mu_1, \sigma_1) \\ &+ \pi_2 f(x_i \mid \mu_2, \sigma_2)\big) \end{aligned}`}
+                  </M>
+                </div>
+              </div>
             ),
           }}
         />

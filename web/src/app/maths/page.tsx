@@ -6,13 +6,14 @@ import { PageHeader } from "@/components/common/page-header";
 import { M, MathBlock } from "@/components/maths/tex";
 import { CORRECTIONS, type Correction } from "@/lib/em/corrections";
 import { smart } from "@/lib/format";
-import { repoFile } from "@/lib/site";
+import { pageMetadata, repoFile } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Maths: the derivations",
   description:
     "The explainer's derivations of the EM algorithm for a two-component Gaussian mixture, rendered with KaTeX: likelihood, the E-step via Bayes' theorem, the M-step updates, a Normal + Beta mixture and convergence, with corrections labelled.",
-};
+  path: "/maths",
+});
 
 const TOC = [
   { id: "likelihood", label: "Likelihood and log-likelihood" },

@@ -17,12 +17,14 @@ import { accuracyMatched, matchByMean } from "@/lib/em/labels";
 import { NOTEBOOK_GROUP_NAMES, notebookFinal, notebookRun } from "@/lib/em/notebook-run";
 import type { MixtureParams } from "@/lib/em/types";
 import { minus, pyPercent } from "@/lib/format";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Pitfalls: where EM quietly goes wrong",
   description:
     "Label switching in the original notebook, stopping before convergence, local maxima across random restarts, and variance collapse when a component sits on a single point.",
-};
+  path: "/pitfalls",
+});
 
 const SECTIONS = [
   { id: "label-switching", title: "Label switching", blurb: "Component 1 is not “sci-fi lovers”." },
