@@ -3,6 +3,7 @@
 import { Dices, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { StaticMixture } from "@/components/charts/static-mixture";
+import { Ell } from "@/components/common/ell";
 import { Segmented } from "@/components/common/segmented";
 import { Button } from "@/components/ui/button";
 import { useEmWorker } from "@/hooks/use-em-worker";
@@ -27,7 +28,7 @@ export function RestartGallery() {
   const [count, setCount] = useState<"12" | "24" | "48">("24");
   const [seed, setSeed] = useState(1);
   const [state, setState] = useState<{ key: string; summary: RestartSummary } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
 
   const dataset = useMemo(
     () => (datasetId === "notebook" ? notebookDataset() : threeBumpsDataset()),
@@ -46,18 +47,19 @@ export function RestartGallery() {
       init,
     })
       .then((summary) => {
-        if (!cancelled) {
-          setState({ key, summary });
-          setError(null);
-        }
+        if (!cancelled) setState({ key, summary });
       })
-      .catch((e: Error) => !cancelled && setError(e.message));
+      .catch((e: Error) => {
+        if (!cancelled) setFailure({ key, message: e.message });
+      });
     return () => {
       cancelled = true;
     };
   }, [runRestarts, dataset, count, seed, init, key]);
 
   const summary = state?.key === key ? state.summary : null;
+  // errors belong to the request that raised them; a new request starts clean
+  const error = !summary && failure?.key === key ? failure.message : null;
   const runs = summary ? [...summary.runs].sort((a, b) => scoreOf(b) - scoreOf(a)) : [];
   const yMax = dataset.id === "notebook" ? 0.32 : 0.36;
 
@@ -129,8 +131,14 @@ export function RestartGallery() {
             {summary.optima.map((o, i) => (
               <span key={o.id} className="num">
                 {i > 0 && ", "}
-                {o.degenerate ? "collapsed" : `ℓ = ${minus(o.logLikelihood.toFixed(2))}`} ({o.count}
-                ×)
+                {o.degenerate ? (
+                  "collapsed"
+                ) : (
+                  <>
+                    <Ell /> = {minus(o.logLikelihood.toFixed(2))}
+                  </>
+                )}{" "}
+                ({o.count}×)
               </span>
             ))}
             .
@@ -175,7 +183,7 @@ export function RestartGallery() {
                 </span>
               </div>
               <p className="num mt-1 text-xs">
-                ℓ ={" "}
+                <Ell /> ={" "}
                 {Number.isFinite(run.logLikelihood) ? minus(run.logLikelihood.toFixed(2)) : "NaN"}
               </p>
             </li>

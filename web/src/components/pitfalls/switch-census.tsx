@@ -14,6 +14,7 @@ export function SwitchCensus() {
   const { runRestarts } = useEmWorker();
   const [seed, setSeed] = useState(7);
   const [state, setState] = useState<{ seed: number; summary: RestartSummary } | null>(null);
+  const [failure, setFailure] = useState<{ seed: number; message: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,13 +26,20 @@ export function SwitchCensus() {
       tolerance: notebookRun.fit.tolerance,
       init: "notebook",
       truth: notebookRun.trueParams,
-    }).then((summary) => !cancelled && setState({ seed, summary }));
+    })
+      .then((summary) => {
+        if (!cancelled) setState({ seed, summary });
+      })
+      .catch((error: Error) => {
+        if (!cancelled) setFailure({ seed, message: error.message });
+      });
     return () => {
       cancelled = true;
     };
   }, [runRestarts, seed]);
 
   const summary = state?.seed === seed ? state.summary : null;
+  const error = !summary && failure?.seed === seed ? failure.message : null;
   const switched = summary ? summary.runs.filter((r) => r.swapped).length : 0;
   const predicted = summary
     ? summary.runs.filter((r) => r.init.mu1 < r.init.mu2 === r.swapped).length
@@ -50,7 +58,11 @@ export function SwitchCensus() {
         Same data, same recipe (μ ~ U(3, 8), σ ~ U(0.5, 2), 15 iterations), 100 fresh random starts.
       </p>
       <div aria-live="polite">
-        {!summary ? (
+        {error ? (
+          <p className="text-sm text-destructive">
+            The census could not run: {error}. Try &ldquo;Another 100&rdquo;.
+          </p>
+        ) : !summary ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" aria-hidden /> fitting in a background
             worker...
